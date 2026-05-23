@@ -214,7 +214,25 @@ const PERSISTENCE_CONFIG = {
     // Max localStorage entries before compression
     maxLocalDecisions: 100
 };
-
+// ============================================
+// SUPABASE CONFIGURATION
+// ============================================
+const SUPABASE_CONFIG = {
+    // Project URL
+    url: 'https://nbdvavzqvxrlxhsbrluz.supabase.co',
+    
+    // Publishable (anon) key — rotate via Supabase dashboard
+    anonKey: 'sb_publishable_6x1xlieXjs3dWqEETQcxnQ_4L1UO2uR',
+    
+    // Table mapping
+    tables: {
+        conversations: 'conversations',
+        sessions: 'sessions',
+        artemisDecisions: 'artemis_decisions',
+        artemisPatterns: 'artemis_patterns',
+        artemisWeights: 'artemis_card_weights'
+    }
+};
 // ============================================
 // EXPORT
 // ============================================

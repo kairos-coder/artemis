@@ -1,10 +1,11 @@
 // ============================================
-// COMPRESS CARD — Pattern Extraction + Storage
+// COMPRESS CARD — Pattern Extraction + Ealdforn Compression Token
 // ============================================
 // Extracts patterns, facts, and preferences from
 // conversation. Writes to GaiaDB and updates
-// local pattern store. This is how Artemis
-// "learns" across sessions.
+// local pattern store. Builds the Ealdforn
+// compression token that other cards prepend
+// to Pollinations calls for system context.
 // ============================================
 
 const compress = {
@@ -52,7 +53,11 @@ const compress = {
             // Build compressed memory summary
             const compressed = this._buildCompressedMemory(input, patterns);
             
-            console.log('[Compress] Extracted', patterns.length, 'patterns');
+            // BUILD EALDFORN COMPRESSION TOKEN — SYSTEM STATE SNAPSHOT
+            const token = this._buildEaldfornToken(sessionId);
+            this._storeToken(token);
+            
+            console.log('[Compress] Extracted', patterns.length, 'patterns — Token:', token.length, 'chars');
             
             return {
                 success: true,
@@ -60,7 +65,8 @@ const compress = {
                     compressed_memory: compressed,
                     pattern_count: patterns.length,
                     patterns: patterns,
-                    db_stored: !!dbResult
+                    db_stored: !!dbResult,
+                    ealdforn_token: token
                 }
             };
             
@@ -73,6 +79,147 @@ const compress = {
             };
         }
     },
+    
+    // ── EALDFORN COMPRESSION TOKEN BUILDER ────────────────
+    // Encodes Artemis's full system state into a dense,
+    // vowel-stripped, pipe-delimited string. Other cards
+    // read this from localStorage and prepend to Pollinations
+    // calls so the model knows what Artemis can do.
+    
+    _buildEaldfornToken: function(sessionId) {
+        var parts = [];
+        
+        // Identity
+        parts.push('RTMS'); // Artemis
+        
+        // Cards available — read from registry
+        try {
+            var cards = [];
+            if (typeof window.ArtemisAgent !== 'undefined' && window.ArtemisAgent.TOOL_CARDS) {
+                cards = window.ArtemisAgent.TOOL_CARDS;
+            }
+            // Fallback: known cards
+            if (cards.length === 0) {
+                cards = [
+                    { name: 'gaia_recall' },
+                    { name: 'memory_manager' },
+                    { name: 'text_generation' },
+                    { name: 'pollinations_image' },
+                    { name: 'browser_hunt' },
+                    { name: 'compress' },
+                    { name: 'decision_log' }
+                ];
+            }
+            var cardIds = [];
+            for (var i = 0; i < cards.length; i++) {
+                cardIds.push(cards[i].name);
+            }
+            parts.push('CRDS:' + cardIds.join(','));
+        } catch(e) {
+            parts.push('CRDS:unknown');
+        }
+        
+        // Database status
+        var dbBits = [];
+        dbBits.push('g=' + (typeof window.supabase !== 'undefined' && window.supabase ? 'cnnctd' : 'ffln'));
+        dbBits.push('k=ffln'); // KairosDB placeholder
+        parts.push('DB:' + dbBits.join(','));
+        
+        // Session
+        var sess = (sessionId || 'unknown');
+        if (sess.length > 12) sess = sess.substring(0, 12);
+        parts.push('SSSN:' + sess);
+        
+        // Memory stats
+        try {
+            var actions = JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]');
+            var memoryGraph = JSON.parse(localStorage.getItem('artemis_memory_graph') || '{}');
+            var nodeCount = 0;
+            for (var key in memoryGraph) {
+                if (memoryGraph.hasOwnProperty(key)) nodeCount++;
+            }
+            parts.push('MMRY:' + actions.length + 'msgs,' + nodeCount + 'nds');
+        } catch(e) {
+            parts.push('MMRY:0msgs,0nds');
+        }
+        
+        // Pollinations status
+        var pollinationsStatus = 'vlbl'; // available
+        if (typeof textGeneration !== 'undefined') {
+            if (textGeneration._pollinationsConsecutiveFails >= 3) {
+                pollinationsStatus = 'ffln';
+            }
+        }
+        parts.push('PLLNTNS:' + pollinationsStatus);
+        
+        // Local model status
+        var localModelStatus = 'ffln';
+        if (typeof textGeneration !== 'undefined') {
+            if (textGeneration._modelLoaded) {
+                localModelStatus = 'rdy(' + (textGeneration._modelLabel || 'unknown').replace(/\s+/g, '') + ')';
+            } else if (textGeneration._modelLoading) {
+                var pct = Math.round((textGeneration._modelLoadProgress || 0) * 100);
+                localModelStatus = 'ldng' + pct + '%(' + (textGeneration._modelLabel || 'unknown').replace(/\s+/g, '') + ')';
+            }
+        }
+        parts.push('LCL_MDL:' + localModelStatus);
+        
+        // Pattern store size
+        try {
+            var patterns = JSON.parse(localStorage.getItem('artemis_patterns_local') || '[]');
+            parts.push('PTTRNS:' + patterns.length);
+        } catch(e) {
+            parts.push('PTTRNS:0');
+        }
+        
+        // Decision history size
+        try {
+            var decisions = JSON.parse(localStorage.getItem('artemis_decision_history') || '[]');
+            parts.push('DCSNS:' + decisions.length);
+        } catch(e) {
+            parts.push('DCSNS:0');
+        }
+        
+        // Last action
+        try {
+            var recentActions = JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]');
+            if (recentActions.length > 0) {
+                var lastAction = recentActions[recentActions.length - 1];
+                var toolMatch = lastAction.match(/→\s*(.+)$/);
+                if (toolMatch) {
+                    var toolName = toolMatch[1].replace(/\s+/g, '').substring(0, 25);
+                    parts.push('LST_CTN:' + toolName);
+                }
+            }
+        } catch(e) {}
+        
+        // Monastery phase
+        parts.push('MNSTRY:phs-lckd');
+        
+        // Ealdforn marker
+        parts.push('EALDFRN:1');
+        
+        return parts.join('|');
+    },
+    
+    _storeToken: function(token) {
+        try {
+            localStorage.setItem('artemis_compression_token', token);
+        } catch(e) {
+            console.warn('[Compress] Token storage failed:', e.message);
+        }
+    },
+    
+    // Public method — other cards call this to get the current token
+    getToken: function() {
+        try {
+            return localStorage.getItem('artemis_compression_token') || '';
+        } catch(e) {
+            return '';
+        }
+    },
+    
+    // ── ORIGINAL COMPRESS METHODS ─────────────────────────
     
     _extractPatterns(input) {
         const patterns = [];
@@ -106,6 +253,24 @@ const compress = {
                 value: factMatch[1].trim(),
                 confidence: 0.9
             });
+        }
+        
+        // Pattern type: SYSTEM AWARENESS — user is talking about Artemis herself
+        const systemAwarenessTerms = [
+            'your programming', 'your code', 'your tools', 'your cards',
+            'improve you', 'your architecture', 'how you work', 'your system',
+            'your context', 'your memory', 'your database'
+        ];
+        for (const term of systemAwarenessTerms) {
+            if (text.indexOf(term) > -1) {
+                patterns.push({
+                    type: 'system_awareness',
+                    signature: text.substring(0, 100),
+                    value: term,
+                    confidence: 0.85
+                });
+                break; // One is enough
+            }
         }
         
         // Pattern type: COMMAND SIGNATURE (how user phrases things)
@@ -157,6 +322,7 @@ const compress = {
                 case 'preference_negative': return `User dislikes: ${p.value}`;
                 case 'favorite': return `User favorite: ${p.value}`;
                 case 'explicit_fact': return `Fact: ${p.value}`;
+                case 'system_awareness': return `System awareness: ${p.value}`;
                 case 'command_signature': return `Command: ${p.value}`;
                 default: return `Pattern: ${p.value}`;
             }

@@ -42,7 +42,7 @@ const ARTEMIS_CARD_DECK = [
         defaultWeight: 0.5,
         requires: [],
         produces: ['text_output'],
-        timeout: 15000,
+        timeout: 20000,
         retryOnFail: true,
         maxRetries: 2,
         execute: null,

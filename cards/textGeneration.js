@@ -206,16 +206,32 @@ var textGeneration = {
     },
     
     _ensureWebLLM: async function() {
-        if (typeof window.CreateMLCEngine !== 'undefined') return;
+    // Already loaded?
+    if (typeof window.CreateMLCEngine !== 'undefined') return;
+    
+    try {
+        // Official WebLLM CDN import (ES module via esm.run)
+        // This is the documented method from webllm.mlc.ai docs
+        var webllm = await import('https://esm.run/@mlc-ai/web-llm');
         
-        return new Promise(function(resolve, reject) {
-            var script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.80/dist/web-llm.min.js';
-            script.onload = function() { resolve(); };
-            script.onerror = function() { reject(new Error('WebLLM CDN failed')); };
-            document.head.appendChild(script);
-        });
-    },
+        // WebLLM exports CreateMLCEngine and other functions
+        // Make them available globally for our card
+        if (webllm.CreateMLCEngine) {
+            window.CreateMLCEngine = webllm.CreateMLCEngine;
+        }
+        if (webllm.CreateWebWorkerEngine) {
+            window.CreateWebWorkerEngine = webllm.CreateWebWorkerEngine;
+        }
+        if (webllm.hasModelInCache) {
+            window.hasModelInCache = webllm.hasModelInCache;
+        }
+        
+        console.log('[TextGen] WebLLM loaded via ES module import');
+    } catch (err) {
+        console.warn('[TextGen] WebLLM import failed: ' + err.message);
+        throw new Error('WebLLM not available — browser may not support WebGPU or ES modules');
+    }
+},
     
     // ── TIER 3: SCRIPTED FALLBACK ────────────────
     _scriptedFallback: function(input, memoryContext) {

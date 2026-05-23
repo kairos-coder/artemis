@@ -22,6 +22,8 @@ const ARTEMIS_CARD_DECK = [
             'tell me everything', 'summarize what you know',
             'what do you have on', 'recall everything'
         ],
+        // Negative patterns: if ANY of these are present, this card is penalized
+        negativePatterns: [],
         defaultWeight: 0.7,
         requires: ['supabase_client'],
         produces: ['memory_context'],
@@ -39,6 +41,7 @@ const ARTEMIS_CARD_DECK = [
         category: 'meta',
         description: 'LocalDB cache, memory graph, session timeout with GaiaDB summary push',
         matchPatterns: [],
+        negativePatterns: [],
         defaultWeight: 1.0,
         requires: ['supabase_client'],
         produces: ['memory_cache', 'graph_update', 'session_summary'],
@@ -49,13 +52,15 @@ const ARTEMIS_CARD_DECK = [
         autoTrigger: true,
         cardFile: 'memoryManager.js'
     },
-        {
+    
+    {
         id: 'model_deck',
         name: 'Model Deck',
         icon: '🧩',
         category: 'meta',
-        description: 'Registry of all loaded browser models — allows cards to request specialized inference',
+        description: 'Registry of loaded browser models — reserved for future cross-Olympian model sharing',
         matchPatterns: [],
+        negativePatterns: [],
         defaultWeight: 1.0,
         requires: [],
         produces: ['model_inference'],
@@ -63,24 +68,26 @@ const ARTEMIS_CARD_DECK = [
         retryOnFail: false,
         maxRetries: 1,
         execute: null,
-        autoTrigger: true,
+        autoTrigger: false,
         cardFile: 'modelDeck.js'
     },
+    
     {
         id: 'card_voter',
         name: 'Card Voter',
         icon: '🧠',
         category: 'meta',
-        description: 'Browser model (SmolLM2 135M ~86MB) that votes YES/NO on tool cards — smart classification above heuristic fallback',
+        description: 'Heuristic card voting engine — no external model required',
         matchPatterns: [],
+        negativePatterns: [],
         defaultWeight: 1.0,
         requires: [],
         produces: ['card_votes'],
-        timeout: 5000,
+        timeout: 1000,
         retryOnFail: false,
-        maxRetries: 1,
+        maxRetries: 0,
         execute: null,
-        autoTrigger: true,
+        autoTrigger: false,
         cardFile: 'cardVoter.js'
     },
     
@@ -89,17 +96,23 @@ const ARTEMIS_CARD_DECK = [
         name: 'Text Generation',
         icon: '💬',
         category: 'generation',
-        description: 'Tiered text gen: Pollinations → Browser Model (Qwen2 0.5B) → Scripted fallback',
+        description: 'Tiered text gen: Pollinations → Scripted fallback',
         matchPatterns: [
-            'hello', 'hi', 'hey', "what's up",
-            'generate', 'write', 'create', 'tell me', 'explain',
-            'describe', 'story', 'poem', 'text', 'say', 'what is',
-            'how to', 'why', 'think', 'imagine', 'compose',
-            'what do you know', 'what do you remember', 'audit',
-            'status', 'report', 'help', 'who are you', 'what are you',
-            'remember', 'recall', 'memory'
+            'hello', 'hi', 'hey', "what's up", 'how are you', 'how is it going',
+            'how\'s it going', 'good morning', 'good evening',
+            'explain', 'tell me', 'what is', 'how to', 'why',
+            'describe', 'think', 'help', 'who are you', 'what are you',
+            'thanks', 'thank you', 'please',
+            'status', 'audit', 'report', 'cards', 'deck', 'weights',
+            'history', 'recent', 'help',
+            'your programming', 'your code', 'your tools', 'your architecture',
+            'improve you', 'how you work', 'your system'
         ],
-        defaultWeight: 0.6,
+        negativePatterns: [
+            'generate image', 'create image', 'make an image', 'draw me',
+            'show me a picture', 'visualize', 'render', 'image of', 'picture of'
+        ],
+        defaultWeight: 0.55,
         requires: [],
         produces: ['text_output'],
         timeout: 60000,
@@ -113,13 +126,25 @@ const ARTEMIS_CARD_DECK = [
         name: 'Pollinations Image',
         icon: '🎨',
         category: 'generation',
-        description: 'Generate images via Pollinations.ai',
+        description: 'Generate images via Pollinations.ai — only when explicitly requested',
         matchPatterns: [
-            'image', 'picture', 'draw', 'visual', 'show me',
-            'generate image', 'create image', 'art', 'photo',
-            'illustration', 'depict', 'render', 'sketch'
+            'generate an image', 'create an image', 'make an image',
+            'generate image', 'create image', 'make image',
+            'draw me a', 'draw a', 'show me a picture',
+            'visualize this', 'render an image', 'render a',
+            'image of a', 'picture of a', 'photo of a',
+            'art of a', 'illustration of', 'depict',
+            'generate a picture', 'create a picture',
+            'show me what', 'what does it look like'
         ],
-        defaultWeight: 0.4,
+        negativePatterns: [
+            'how', 'what', 'why', 'when', 'where', 'who',
+            'hello', 'hi', 'hey', 'thanks', 'status', 'help',
+            'your', 'you', 'memory', 'recall', 'remember',
+            'compress', 'hunt', 'search', 'find',
+            'code', 'programming', 'system', 'card', 'deck'
+        ],
+        defaultWeight: 0.35,
         requires: [],
         produces: ['image_output', 'image_url'],
         timeout: 20000,
@@ -133,16 +158,22 @@ const ARTEMIS_CARD_DECK = [
         name: 'Browser Hunt',
         icon: '🏹',
         category: 'retrieval',
-        description: 'Search the web or fetch live data',
+        description: 'Hunt through kairos-coder repos — reads HTML, JS, CSS, MD, and JSON files',
         matchPatterns: [
-            'search', 'find online', 'look up on', 'google',
-            'fetch', 'retrieve url', 'get from web', 'latest',
-            'current', 'news', 'real time', 'live data'
+            'hunt for', 'search for', 'find in', 'look for',
+            'browser hunt', 'search the repos', 'hunt across',
+            'find across', 'search all projects', 'hunt the repos',
+            'find in my code', 'search my code', 'find file',
+            'where is the code', 'find in repo'
+        ],
+        negativePatterns: [
+            'generate image', 'create image', 'draw',
+            'hello', 'hi', 'hey', 'thanks', 'status'
         ],
         defaultWeight: 0.3,
         requires: [],
         produces: ['web_context', 'fetched_data'],
-        timeout: 10000,
+        timeout: 15000,
         retryOnFail: true,
         maxRetries: 2,
         execute: null,
@@ -156,9 +187,10 @@ const ARTEMIS_CARD_DECK = [
         description: 'Extract patterns from conversation, build Ealdforn compression token, write to GaiaDB, update weights',
         matchPatterns: [
             'compress', 'save this', 'remember this', 'store',
-            'log', 'note this', 'keep this', 'archive', 'record',
+            'log this', 'note this', 'keep this', 'archive', 'record',
             'pattern', 'learn', 'update memory'
         ],
+        negativePatterns: [],
         defaultWeight: 0.6,
         requires: ['supabase_client'],
         produces: ['compressed_memory', 'pattern_update', 'ealdforn_token'],
@@ -175,6 +207,7 @@ const ARTEMIS_CARD_DECK = [
         category: 'meta',
         description: 'Log card decisions and outcomes for weight learning',
         matchPatterns: [],
+        negativePatterns: [],
         defaultWeight: 1.0,
         requires: ['supabase_client'],
         produces: ['decision_record'],
@@ -221,7 +254,7 @@ const ROUTER_CONFIG = {
     confidenceThreshold: 0.35,
     
     // Maximum cards that can fire per turn
-    maxCardsPerTurn: 4,
+    maxCardsPerTurn: 3,
     
     // Whether the same card can fire multiple times per turn
     allowDuplicateCards: false,
@@ -233,35 +266,14 @@ const ROUTER_CONFIG = {
     learningRate: 0.05,
     learningWarmup: 5,
     
-    // Classification mode: 'heuristic' or 'ml'
-    // ML mode activates when card_voter model is loaded
+    // Classification mode
     classifierMode: 'heuristic',
     
-    // Card voter configuration (dedicated decision engine)
-    cardVoter: {
-        enabled: true,
-        primaryModel: 'SmolLM2-135M-Instruct-q4f16_1-MLC-1k',
-        primaryLabel: 'SmolLM2 135M',
-        primarySize: '~86 MB',
-        fallbackModel: 'Qwen2-0.5B-Instruct-q4f16_1-MLC-1k',
-        fallbackLabel: 'Qwen2 0.5B',
-        loadOnBoot: true,
-        warmupPrompt: 'Card: test\nDescription: This is a test card\nUser input: "hello"\n\nDoes this card match the user\'s intent? Answer only YES or NO.',
-        fallbackToHeuristic: true
-    },
+    // Negative pattern penalty: multiplier applied when negative patterns match
+    negativePatternPenalty: 0.6,
     
-    // Legacy ML config (used if card_voter is disabled)
-    mlModel: {
-        task: 'text-generation',
-        model: 'SmolLM2-135M-Instruct-q4f16_1-MLC-1k',
-        fallbackModel: 'Qwen2-0.5B-Instruct-q4f16_1-MLC-1k',
-        label: 'SmolLM2 135M',
-        size: '~86 MB',
-        cacheModel: true,
-        useForVoting: true,
-        candidateLabels: [],
-        hypothesisTemplate: "The user wants to {}"
-    }
+    // Default card if nothing matches
+    defaultCard: 'text_generation'
 };
 
 // ============================================
@@ -310,9 +322,7 @@ const SUPABASE_CONFIG = {
 // ============================================
 // AUTO-TRIGGER CARDS (run every cycle)
 // ============================================
-// Cards with autoTrigger: true are added here automatically
-// by the agent loader. Listed explicitly for clarity.
-const AUTO_TRIGGER_CARDS = ['memory_manager', 'card_voter', 'decision_log'];
+const AUTO_TRIGGER_CARDS = ['memory_manager', 'decision_log'];
 
 // ============================================
 // EXPORT

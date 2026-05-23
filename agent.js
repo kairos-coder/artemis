@@ -1,10 +1,10 @@
 // ============================================
-// ARTEMIS AGENT — EaldfornAI Card Router v2.2
+// ARTEMIS AGENT — EaldfornAI Card Router v2.3
 // ============================================
 // Loads card registry from config.js
 // Reads Supabase config from SUPABASE_CONFIG
 // Classifies → Selects → Sequences → Executes → Combines → Logs
-// Heuristic classifier with improved scoring
+// Heuristic classifier with negative pattern scoring
 // All persistence via GaiaDB + localStorage
 // ============================================
 
@@ -36,25 +36,16 @@ var ArtemisAgent = (function() {
         printBanner();
 
         try {
-            // 1. Load config
             loadConfig();
-
-            // 2. Load all card modules
             await loadAllCards();
-
-            // 3. Connect Supabase
             await connectSupabase();
-
-            // 4. Get or create session
             sessionId = getOrCreateSession();
-
-            // 5. Load learned weights
             loadLearnedWeights();
 
-            // 6. Classifier mode
             routerConfig.classifierMode = 'heuristic';
-            console.log('[Artemis] Classifier: heuristic (scoring: single-match=' + 
-                routerConfig.confidenceThreshold + '+ threshold)');
+            console.log('[Artemis] Classifier: heuristic (threshold=' + 
+                (routerConfig.confidenceThreshold || 0.35) + ', negativePenalty=' +
+                (routerConfig.negativePatternPenalty || 0.6) + ')');
 
             isInitialized = true;
             console.log('[Artemis] Initialized — %d cards, session: %s', 
@@ -89,6 +80,8 @@ var ArtemisAgent = (function() {
             : {
                 confidenceThreshold: 0.35,
                 maxCardsPerTurn: 3,
+                negativePatternPenalty: 0.6,
+                defaultCard: 'text_generation',
                 executionOrder: ['meta', 'memory', 'retrieval', 'generation']
             };
 
@@ -110,55 +103,42 @@ var ArtemisAgent = (function() {
     // CARD LOADING
     // ============================================
     async function loadAllCards() {
-        var cardFiles = [];
-        for (var i = 0; i < cardRegistry.length; i++) {
-            if (cardRegistry[i].cardFile) {
-                cardFiles.push(cardRegistry[i].cardFile);
-            }
-        }
-
         var loaded = 0;
         var failed = 0;
 
-        for (var j = 0; j < cardFiles.length; j++) {
+        for (var i = 0; i < cardRegistry.length; i++) {
+            var cardDef = cardRegistry[i];
+            if (!cardDef.cardFile) continue;
+
             try {
-                var cardModule = await loadCardModule(cardFiles[j]);
+                var cardModule = await loadCardModule(cardDef.cardFile);
                 if (cardModule) {
                     cards.push(cardModule);
-                    var registryCard = cardRegistry.find(function(c) {
-                        return c.cardFile === cardFiles[j];
-                    });
-                    if (registryCard) {
-                        registryCard.execute = cardModule.run.bind(cardModule);
-                        registryCard._module = cardModule;
-                    }
+                    cardDef.execute = cardModule.run.bind(cardModule);
+                    cardDef._module = cardModule;
                     loaded++;
                     console.log('[Artemis]   ✓ Loaded card: %s', cardModule.id);
                 }
             } catch (err) {
                 failed++;
-                console.warn('[Artemis]   ✗ Failed to load %s: %s', cardFiles[j], err.message);
+                console.warn('[Artemis]   ✗ Failed to load %s: %s', cardDef.cardFile, err.message);
             }
         }
 
-        console.log('[Artemis] Cards loaded: %d/%d (%d failed)', loaded, cardFiles.length, failed);
+        console.log('[Artemis] Cards loaded: %d/%d (%d failed)', loaded, loaded + failed, failed);
     }
 
     async function loadCardModule(cardFile) {
         try {
             var response = await fetch('cards/' + cardFile);
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
+            if (!response.ok) throw new Error('HTTP ' + response.status);
             var text = await response.text();
             var varName = cardFile.replace('.js', '');
             var moduleFn = new Function(text + '; return ' + varName + ';');
             return moduleFn();
         } catch (fetchErr) {
             var globalName = cardFile.replace('.js', '');
-            if (typeof window[globalName] !== 'undefined') {
-                return window[globalName];
-            }
+            if (typeof window[globalName] !== 'undefined') return window[globalName];
             throw fetchErr;
         }
     }
@@ -176,7 +156,7 @@ var ArtemisAgent = (function() {
         var anonKey = SUPABASE_CONFIG.anonKey;
 
         if (!url || !anonKey) {
-            console.warn('[Artemis] Supabase URL or key missing. Running without persistence.');
+            console.warn('[Artemis] Supabase URL or key missing.');
             return;
         }
 
@@ -221,10 +201,7 @@ var ArtemisAgent = (function() {
         try {
             var key = persistenceConfig.localKeys.cardWeights || 'artemis_card_weights';
             var stored = localStorage.getItem(key);
-            if (!stored) {
-                console.log('[Artemis] No learned weights found. Using defaults.');
-                return;
-            }
+            if (!stored) return;
 
             var learnedWeights = JSON.parse(stored);
             var applied = 0;
@@ -239,7 +216,9 @@ var ArtemisAgent = (function() {
                 }
             }
 
-            console.log('[Artemis] Learned weights applied to %d cards', applied);
+            if (applied > 0) {
+                console.log('[Artemis] Learned weights applied to %d cards', applied);
+            }
         } catch (err) {
             console.warn('[Artemis] Weight load failed:', err.message);
         }
@@ -265,9 +244,7 @@ var ArtemisAgent = (function() {
     // CORE PIPELINE: processInput()
     // ============================================
     async function processInput(userInput, options) {
-        if (!isInitialized) {
-            await init();
-        }
+        if (!isInitialized) await init();
 
         options = options || {};
         decisionCount++;
@@ -277,7 +254,6 @@ var ArtemisAgent = (function() {
             : userInput;
         console.log('[Artemis] Decision #%d — "%s"', decisionCount, inputPreview);
 
-        // Build execution context
         var context = {
             input: userInput,
             sessionId: sessionId,
@@ -295,25 +271,22 @@ var ArtemisAgent = (function() {
         logVotes(context.votedCards);
 
         // Phase 2: Select
-        var selectedCards = selectCards(context.votedCards);
-
-        // Phase 3: Sequence
-        context.executedCards = sequenceCards(selectedCards);
+        context.executedCards = selectCards(context.votedCards);
         logExecutionOrder(context.executedCards);
 
-        // Phase 4: Execute
+        // Phase 3: Execute
         context.outputs = await executeCards(context.executedCards, context);
 
-        // Phase 5: Combine
+        // Phase 4: Combine
         var combined = combineOutputs(context.outputs);
 
-        // Phase 6: Log decision
+        // Phase 5: Log decision
         await logDecision(context);
 
-        // Phase 7: Run auto cards
+        // Phase 6: Run auto cards
         await runAutoCards(context);
 
-        // Phase 8: Save recent action
+        // Phase 7: Save recent action
         saveRecentAction(userInput, combined);
 
         return {
@@ -337,64 +310,67 @@ var ArtemisAgent = (function() {
     }
 
     // ============================================
-    // PHASE 1: CLASSIFY (IMPROVED SCORING)
+    // PHASE 1: CLASSIFY (NEGATIVE PATTERN SCORING)
     // ============================================
-   function classifyInput(input) {
-    var inputLower = input.toLowerCase();
-    var votedCards = [];
-    var useModelVoting = typeof cardVoter !== 'undefined' && cardVoter.voteOnCard;
+    function classifyInput(input) {
+        var inputLower = input.toLowerCase();
+        var votedCards = [];
+        var penalty = routerConfig.negativePatternPenalty || 0.6;
+        var threshold = routerConfig.confidenceThreshold || 0.35;
 
-    for (var i = 0; i < cardRegistry.length; i++) {
-        var card = cardRegistry[i];
-        if (card.autoTrigger) continue;
-        if (!card.matchPatterns || card.matchPatterns.length === 0) continue;
+        for (var i = 0; i < cardRegistry.length; i++) {
+            var card = cardRegistry[i];
+            if (card.autoTrigger) continue;
+            if (!card.matchPatterns || card.matchPatterns.length === 0) continue;
 
-        var score = 0;
-        var method = 'heuristic';
+            // Count positive matches
+            var matchCount = 0;
+            for (var j = 0; j < card.matchPatterns.length; j++) {
+                if (inputLower.indexOf(card.matchPatterns[j].toLowerCase()) > -1) {
+                    matchCount++;
+                }
+            }
 
-        // Try model voting first (synchronous check — model vote is async but we fire-and-forget)
-        // For full async model voting, the agent would need to be restructured.
-        // For now, use heuristic scoring with model fallback available to individual cards.
+            // Count negative matches
+            var negativeCount = 0;
+            if (card.negativePatterns && card.negativePatterns.length > 0) {
+                for (var k = 0; k < card.negativePatterns.length; k++) {
+                    if (inputLower.indexOf(card.negativePatterns[k].toLowerCase()) > -1) {
+                        negativeCount++;
+                    }
+                }
+            }
 
-        // Heuristic scoring
-        var matchCount = 0;
-        for (var j = 0; j < card.matchPatterns.length; j++) {
-            if (inputLower.indexOf(card.matchPatterns[j].toLowerCase()) > -1) {
-                matchCount++;
+            if (matchCount > 0) {
+                var baseScore = card.defaultWeight;
+                var matchBonus = Math.min((matchCount - 1) * 0.08, 0.3);
+                var score = Math.min(baseScore + matchBonus, 1.0);
+
+                // Apply negative penalty: each negative match multiplies score
+                if (negativeCount > 0) {
+                    score *= Math.pow(penalty, negativeCount);
+                }
+
+                // Apply learned modifier
+                var modifier = getLearnedModifier(card.id);
+                score *= modifier;
+
+                if (score >= threshold) {
+                    votedCards.push({
+                        id: card.id,
+                        name: card.name,
+                        icon: card.icon,
+                        category: card.category,
+                        score: score,
+                        matchCount: matchCount,
+                        negativeCount: negativeCount,
+                        card: card
+                    });
+                }
             }
         }
 
-        if (matchCount > 0) {
-            var baseScore = card.defaultWeight;
-            var matchBonus = Math.min((matchCount - 1) * 0.08, 0.3);
-            score = Math.min(baseScore + matchBonus, 1.0);
-            var modifier = getLearnedModifier(card.id);
-            score *= modifier;
-        }
-
-        if (score >= (routerConfig.confidenceThreshold || 0.35)) {
-            votedCards.push({
-                id: card.id,
-                name: card.name,
-                icon: card.icon,
-                category: card.category,
-                score: score,
-                matchCount: matchCount,
-                method: method,
-                card: card
-            });
-        }
-    }
-
-    votedCards.sort(function(a, b) { return b.score - a.score; });
-    return votedCards;
-}
-
-        // Sort by score descending
-        votedCards.sort(function(a, b) {
-            return b.score - a.score;
-        });
-
+        votedCards.sort(function(a, b) { return b.score - a.score; });
         return votedCards;
     }
 
@@ -418,12 +394,12 @@ var ArtemisAgent = (function() {
         var maxCards = routerConfig.maxCardsPerTurn || 3;
 
         if (votedCards.length === 0) {
-            // Fallback: try text_generation first, then pollinations_image
+            var defaultCardId = routerConfig.defaultCard || 'text_generation';
             var fallback = cardRegistry.find(function(c) {
-                return c.id === 'text_generation';
+                return c.id === defaultCardId;
             });
             if (fallback) {
-                console.log('[Artemis] No votes — falling back to text_generation');
+                console.log('[Artemis] No votes — falling back to ' + defaultCardId);
                 return [{
                     id: fallback.id,
                     name: fallback.name,
@@ -439,19 +415,6 @@ var ArtemisAgent = (function() {
         return votedCards.slice(0, maxCards);
     }
 
-    // ============================================
-    // PHASE 3: SEQUENCE
-    // ============================================
-    function sequenceCards(selectedCards) {
-        var order = routerConfig.executionOrder || ['meta', 'memory', 'retrieval', 'generation'];
-
-        return selectedCards.sort(function(a, b) {
-            var pa = order.indexOf(a.category);
-            var pb = order.indexOf(b.category);
-            return (pa >= 0 ? pa : 999) - (pb >= 0 ? pb : 999);
-        });
-    }
-
     function logExecutionOrder(cards) {
         if (cards.length === 0) {
             console.log('[Artemis] Execution: none');
@@ -465,7 +428,7 @@ var ArtemisAgent = (function() {
     }
 
     // ============================================
-    // PHASE 4: EXECUTE
+    // PHASE 3: EXECUTE
     // ============================================
     async function executeCards(sequencedCards, context) {
         var outputs = {};
@@ -489,17 +452,13 @@ var ArtemisAgent = (function() {
                     'Card "' + card.id + '" timed out after ' + timeoutMs + 'ms'
                 );
 
-                if (result && result.success) {
-                    if (result.data) {
-                        // Merge outputs
-                        var keys = Object.keys(result.data);
-                        for (var k = 0; k < keys.length; k++) {
-                            outputs[keys[k]] = result.data[keys[k]];
-                        }
-                        // Update context for downstream cards
-                        if (result.data.memory_context) {
-                            context.memoryContext = result.data.memory_context;
-                        }
+                if (result && result.success && result.data) {
+                    var keys = Object.keys(result.data);
+                    for (var k = 0; k < keys.length; k++) {
+                        outputs[keys[k]] = result.data[keys[k]];
+                    }
+                    if (result.data.memory_context) {
+                        context.memoryContext = result.data.memory_context;
                     }
                     console.log('[Artemis]   ✓ %s succeeded', card.id);
                 } else {
@@ -518,41 +477,34 @@ var ArtemisAgent = (function() {
         return Promise.race([
             promise,
             new Promise(function(_, reject) {
-                setTimeout(function() {
-                    reject(new Error(errorMessage));
-                }, ms);
+                setTimeout(function() { reject(new Error(errorMessage)); }, ms);
             })
         ]);
     }
 
     // ============================================
-    // PHASE 5: COMBINE OUTPUTS
+    // PHASE 4: COMBINE OUTPUTS
     // ============================================
     function combineOutputs(outputs) {
         var text = '';
         var imageUrl = null;
 
-        // Memory context first
         if (outputs.memory_context) {
             text += '*From memory:*\n' + outputs.memory_context + '\n\n';
         }
 
-        // Web context
         if (outputs.web_context) {
             text += '*From the web:*\n' + outputs.web_context + '\n\n';
         }
 
-        // Generated text (main response)
         if (outputs.text_output) {
             text += outputs.text_output;
         }
 
-        // Compressed memory note
         if (outputs.compressed_memory) {
             text += '\n\n> *' + outputs.compressed_memory + '*';
         }
 
-        // Image
         if (outputs.image_url) {
             imageUrl = outputs.image_url;
             if (!text.trim()) {
@@ -560,16 +512,15 @@ var ArtemisAgent = (function() {
             }
         }
 
-        // Ultimate fallback
         if (!text.trim() && !imageUrl) {
-            text = 'I received your message, but none of my cards produced output. This may mean Pollinations is down and my local model is not yet loaded. Try STATUS to check the system, or AUDIT to see what I know.';
+            text = 'I received your message, but none of my cards produced output. Try STATUS or AUDIT.';
         }
 
         return { text: text.trim(), imageUrl: imageUrl };
     }
 
     // ============================================
-    // PHASE 6: LOG DECISION
+    // PHASE 5: LOG DECISION
     // ============================================
     async function logDecision(context) {
         var decisionCard = null;
@@ -596,7 +547,7 @@ var ArtemisAgent = (function() {
     }
 
     // ============================================
-    // PHASE 7: AUTO CARDS
+    // PHASE 6: AUTO CARDS
     // ============================================
     async function runAutoCards(context) {
         for (var i = 0; i < cardRegistry.length; i++) {
@@ -621,7 +572,7 @@ var ArtemisAgent = (function() {
     }
 
     // ============================================
-    // PHASE 8: SAVE RECENT ACTION
+    // PHASE 7: SAVE RECENT ACTION
     // ============================================
     function saveRecentAction(input, output) {
         try {
@@ -637,9 +588,7 @@ var ArtemisAgent = (function() {
                 existing.splice(0, existing.length - 50);
             }
             localStorage.setItem(key, JSON.stringify(existing));
-        } catch (e) {
-            // Non-critical
-        }
+        } catch (e) {}
     }
 
     // ============================================

@@ -45,7 +45,7 @@ var pollinationsText = {
                     if (response.status === 500) {
                         lastError = new Error('Pollinations server error (500)');
                         if (attempt === 0) {
-                            await new Promise(function(r) { setTimeout(r, 1000); });
+                            await new Promise(function(r) { setTimeout(r, 500); });
                         }
                         continue;
                     }

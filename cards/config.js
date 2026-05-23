@@ -16,7 +16,11 @@ const ARTEMIS_CARD_DECK = [
         matchPatterns: [
             'remember', 'recall', 'what did', 'past', 'history',
             'last time', 'previous', 'stored', 'memory', 'look up',
-            'find in', 'search db', 'what do you know about'
+            'find in', 'search db', 'what do you know about',
+            'what do you know', 'what do you remember',
+            'what have you learned', 'your memory',
+            'tell me everything', 'summarize what you know',
+            'what do you have on', 'recall everything'
         ],
         defaultWeight: 0.7,
         requires: ['supabase_client'],
@@ -24,29 +28,32 @@ const ARTEMIS_CARD_DECK = [
         timeout: 3000,
         retryOnFail: true,
         maxRetries: 2,
-        // Function reference — loaded dynamically or hard-coded
-        execute: null, // Set at runtime: execute: gaiaRecall.run
+        execute: null,
         cardFile: 'gaiaRecall.js'
     },
     {
-        id: 'pollinations_text',
-        name: 'Pollinations Text',
+        id: 'text_generation',
+        name: 'Text Generation',
         icon: '💬',
         category: 'generation',
-        description: 'Generate text via Pollinations.ai free API',
+        description: 'Tiered text gen: Pollinations → Browser Model (SmolLM2 135M) → Scripted fallback',
         matchPatterns: [
+            'hello', 'hi', 'hey', "what's up",
             'generate', 'write', 'create', 'tell me', 'explain',
             'describe', 'story', 'poem', 'text', 'say', 'what is',
-            'how to', 'why', 'think', 'imagine', 'compose'
+            'how to', 'why', 'think', 'imagine', 'compose',
+            'what do you know', 'what do you remember', 'audit',
+            'status', 'report', 'help', 'who are you', 'what are you',
+            'remember', 'recall', 'memory'
         ],
-        defaultWeight: 0.5,
+        defaultWeight: 0.6,
         requires: [],
         produces: ['text_output'],
-        timeout: 20000,
-        retryOnFail: true,
-        maxRetries: 2,
+        timeout: 60000,
+        retryOnFail: false,
+        maxRetries: 1,
         execute: null,
-        cardFile: 'pollinationsText.js'
+        cardFile: 'textGeneration.js'
     },
     {
         id: 'pollinations_image',
@@ -109,44 +116,20 @@ const ARTEMIS_CARD_DECK = [
         cardFile: 'compress.js'
     },
     {
-    id: 'browser_model',
-    name: 'Browser Model',
-    icon: '🧠',
-    category: 'generation',
-    description: 'Local LLM running in-browser via WebLLM + WebGPU — zero API, fully offline after cache',
-    matchPatterns: [
-        'generate', 'write', 'create', 'tell me', 'explain',
-        'describe', 'story', 'poem', 'text', 'say', 'what is',
-        'how to', 'why', 'think', 'imagine', 'compose',
-        'what do you know', 'what do you remember', 'audit',
-        'status', 'report'
-    ],
-    defaultWeight: 0.5,
-    requires: [],
-    produces: ['text_output', 'model_response'],
-    timeout: 120000, // 2 min — first load downloads model
-    retryOnFail: false,
-    maxRetries: 1,
-    execute: null,
-    cardFile: 'browserModel.js'
-}
-    {
         id: 'decision_log',
         name: 'Decision Logger',
         icon: '📊',
         category: 'meta',
         description: 'Log card decisions and outcomes for weight learning',
-        matchPatterns: [
-            // This card auto-triggers on every routing event — no user patterns needed
-        ],
-        defaultWeight: 1.0, // Always executes
+        matchPatterns: [],
+        defaultWeight: 1.0,
         requires: ['supabase_client'],
         produces: ['decision_record'],
         timeout: 2000,
         retryOnFail: false,
         maxRetries: 1,
         execute: null,
-        autoTrigger: true, // Always runs after routing
+        autoTrigger: true,
         cardFile: 'decisionLog.js'
     }
 ];
@@ -157,23 +140,23 @@ const ARTEMIS_CARD_DECK = [
 const CARD_CATEGORIES = {
     memory: {
         label: 'Memory & Recall',
-        color: '#a78bfa', // purple
-        priority: 2 // Higher priority cards execute first in sequence
+        color: '#a78bfa',
+        priority: 2
     },
     generation: {
         label: 'Content Generation',
-        color: '#60a5fa', // blue
+        color: '#60a5fa',
         priority: 3
     },
     retrieval: {
         label: 'External Retrieval',
-        color: '#f59e0b', // amber
+        color: '#f59e0b',
         priority: 3
     },
     meta: {
         label: 'System Operations',
-        color: '#6b7280', // gray
-        priority: 1 // Meta always first
+        color: '#6b7280',
+        priority: 1
     }
 };
 
@@ -181,32 +164,17 @@ const CARD_CATEGORIES = {
 // ROUTER CONFIGURATION
 // ============================================
 const ROUTER_CONFIG = {
-    // Minimum confidence threshold for playing a card
     confidenceThreshold: 0.35,
-    
-    // Maximum cards to play per turn
     maxCardsPerTurn: 3,
-    
-    // Allow the same card twice in one turn?
     allowDuplicateCards: false,
-    
-    // Sequence order: meta → memory → retrieval → generation
     executionOrder: ['meta', 'memory', 'retrieval', 'generation'],
-    
-    // Learning rate for weight adjustments (0-1)
     learningRate: 0.05,
-    
-    // Minimum sessions before weights start adjusting
     learningWarmup: 5,
-    
-    // Classifier mode: 'heuristic' | 'ml' | 'hybrid'
-    classifierMode: 'hybrid',
-    
-    // ML model config (Transformers.js)
+    classifierMode: 'heuristic',
     mlModel: {
         task: 'zero-shot-classification',
         model: 'Xenova/distilbert-base-uncased-mnli',
-        candidateLabels: [], // Populated dynamically from card matchPatterns
+        candidateLabels: [],
         hypothesisTemplate: "The user wants to {}",
         cacheModel: true
     }
@@ -216,37 +184,24 @@ const ROUTER_CONFIG = {
 // PERSISTENCE CONFIG
 // ============================================
 const PERSISTENCE_CONFIG = {
-    // Supabase table for card decisions
     decisionsTable: 'artemis_decisions',
-    
-    // Supabase table for learned patterns
     patternsTable: 'artemis_patterns',
-    
-    // Supabase table for card weight history
     weightsTable: 'artemis_card_weights',
-    
-    // localStorage keys
     localKeys: {
         compressedMemory: 'artemis_compressed_memory',
         recentActions: 'artemis_recent_actions',
         cardWeights: 'artemis_card_weights',
         decisionHistory: 'artemis_decision_history'
     },
-    
-    // Max localStorage entries before compression
     maxLocalDecisions: 100
 };
+
 // ============================================
 // SUPABASE CONFIGURATION
 // ============================================
 const SUPABASE_CONFIG = {
-    // Project URL
     url: 'https://nbdvavzqvxrlxhsbrluz.supabase.co',
-    
-    // Publishable (anon) key — rotate via Supabase dashboard
     anonKey: 'sb_publishable_6x1xlieXjs3dWqEETQcxnQ_4L1UO2uR',
-    
-    // Table mapping
     tables: {
         conversations: 'conversations',
         sessions: 'sessions',
@@ -255,6 +210,7 @@ const SUPABASE_CONFIG = {
         artemisWeights: 'artemis_card_weights'
     }
 };
+
 // ============================================
 // EXPORT
 // ============================================
@@ -263,6 +219,7 @@ if (typeof module !== 'undefined' && module.exports) {
         ARTEMIS_CARD_DECK,
         CARD_CATEGORIES,
         ROUTER_CONFIG,
-        PERSISTENCE_CONFIG
+        PERSISTENCE_CONFIG,
+        SUPABASE_CONFIG
     };
 }

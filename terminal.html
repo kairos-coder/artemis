@@ -23,13 +23,7 @@
             --card-generation: #60a5fa;
             --font-mono: 'Courier New', 'SF Mono', 'Fira Code', monospace;
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: var(--bg);
             color: var(--text);
@@ -39,8 +33,6 @@
             flex-direction: column;
             overflow: hidden;
         }
-
-        /* HEADER BAR */
         .header {
             background: var(--surface);
             border-bottom: 1px solid var(--border);
@@ -50,9 +42,7 @@
             gap: 12px;
             flex-shrink: 0;
         }
-        .header .icon {
-            font-size: 22px;
-        }
+        .header .icon { font-size: 22px; }
         .header .title {
             font-size: 14px;
             font-weight: bold;
@@ -78,9 +68,7 @@
             color: #60a5fa;
             border: 1px solid #3a6a8a;
         }
-        .header .spacer {
-            flex: 1;
-        }
+        .header .spacer { flex: 1; }
         .header button {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -93,30 +81,14 @@
             letter-spacing: 0.5px;
             transition: all 0.2s;
         }
-        .header button:hover {
-            border-color: var(--accent);
-            color: var(--accent-glow);
-        }
+        .header button:hover { border-color: var(--accent); color: var(--accent-glow); }
         .header button.active {
             background: #1a2a24;
             border-color: var(--accent);
             color: var(--accent-glow);
         }
-
-        /* MAIN LAYOUT */
-        .main {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        /* OUTPUT PANEL */
-        .output-panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-        }
+        .main { display: flex; flex: 1; overflow: hidden; }
+        .output-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
         .output-area {
             flex: 1;
             overflow-y: auto;
@@ -126,34 +98,15 @@
             white-space: pre-wrap;
             word-break: break-word;
         }
-        .output-area .line {
-            margin-bottom: 2px;
-        }
-        .output-area .line.system {
-            color: var(--card-meta);
-        }
-        .output-area .line.vote {
-            color: var(--silver);
-        }
-        .output-area .line.exec {
-            color: var(--accent);
-        }
-        .output-area .line.result {
-            color: var(--text-bright);
-        }
-        .output-area .line.error {
-            color: var(--error);
-        }
-        .output-area .line.warn {
-            color: var(--warn);
-        }
-        .output-area .line.user {
-            color: var(--accent-glow);
-        }
-        .output-area .separator {
-            border-top: 1px dashed var(--border);
-            margin: 8px 0;
-        }
+        .output-area .line { margin-bottom: 2px; }
+        .output-area .line.system { color: var(--card-meta); }
+        .output-area .line.vote { color: var(--silver); }
+        .output-area .line.exec { color: var(--accent); }
+        .output-area .line.result { color: var(--text-bright); }
+        .output-area .line.error { color: var(--error); }
+        .output-area .line.warn { color: var(--warn); }
+        .output-area .line.user { color: var(--accent-glow); }
+        .output-area .separator { border-top: 1px dashed var(--border); margin: 8px 0; }
         .output-area img {
             max-width: 300px;
             max-height: 300px;
@@ -162,8 +115,6 @@
             margin: 8px 0;
             display: block;
         }
-
-        /* SIDE PANEL */
         .side-panel {
             width: 340px;
             background: var(--surface);
@@ -174,10 +125,7 @@
             overflow-y: auto;
             font-size: 10px;
         }
-        .side-section {
-            padding: 12px;
-            border-bottom: 1px solid var(--border);
-        }
+        .side-section { padding: 12px; border-bottom: 1px solid var(--border); }
         .side-section h3 {
             font-size: 10px;
             text-transform: uppercase;
@@ -185,35 +133,15 @@
             color: var(--silver);
             margin-bottom: 8px;
         }
-        .card-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 0;
-            font-size: 10px;
-        }
-        .card-status .dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
+        .card-status { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 10px; }
+        .card-status .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
         .card-status .dot.ready { background: var(--accent); }
         .card-status .dot.waiting { background: var(--card-meta); }
         .card-status .card-name { flex: 1; }
-        .card-status .card-weight {
-            color: var(--card-meta);
-            font-size: 9px;
-        }
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 3px 0;
-        }
+        .card-status .card-weight { color: var(--card-meta); font-size: 9px; }
+        .stat-row { display: flex; justify-content: space-between; padding: 3px 0; }
         .stat-row .label { color: var(--card-meta); }
         .stat-row .value { color: var(--text-bright); }
-
-        /* INPUT BAR */
         .input-bar {
             background: var(--surface);
             border-top: 1px solid var(--border);
@@ -234,12 +162,8 @@
             outline: none;
             transition: border-color 0.2s;
         }
-        .input-bar input:focus {
-            border-color: var(--accent);
-        }
-        .input-bar input::placeholder {
-            color: #3a4a40;
-        }
+        .input-bar input:focus { border-color: var(--accent); }
+        .input-bar input::placeholder { color: #3a4a40; }
         .input-bar button {
             background: var(--accent);
             border: none;
@@ -256,7 +180,7 @@
         }
         .input-bar button:hover {
             background: var(--accent-glow);
-            box-shadow: 0 0 12px rgba(126, 184, 160, 0.3);
+            box-shadow: 0 0 12px rgba(126,184,160,0.3);
         }
         .input-bar button:disabled {
             background: var(--border);
@@ -264,34 +188,12 @@
             cursor: not-allowed;
             box-shadow: none;
         }
-
-        /* SCROLLBAR */
-        ::-webkit-scrollbar {
-            width: 4px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 2px;
-        }
-
-        /* PULSE ANIMATION */
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .pulsing {
-            animation: pulse 1.5s infinite;
-        }
-
-        /* RESPONSIVE */
-        @media (max-width: 768px) {
-            .side-panel {
-                display: none;
-            }
-        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .pulsing { animation: pulse 1.5s infinite; }
+        @media (max-width: 768px) { .side-panel { display: none; } }
     </style>
 </head>
 <body>
@@ -312,49 +214,25 @@
 
     <!-- MAIN -->
     <div class="main">
-        <!-- OUTPUT -->
         <div class="output-panel">
-            <div class="output-area" id="output">
-                <div class="line system">╔══════════════════════════════════════════╗</div>
-                <div class="line system">║   ARTEMIS TERMINAL — EaldfornAI v2.0    ║</div>
-                <div class="line system">║   Card Router Engine                    ║</div>
-                <div class="line system">║   Monastery Phase-Lock: ACTIVE          ║</div>
-                <div class="line system">╚══════════════════════════════════════════╝</div>
-                <div class="line system"></div>
-                <div class="line system">[SYS] Initializing Artemis Agent...</div>
-                <div class="line system" id="initLine">[SYS] Loading card registry...</div>
-                <div class="line system"></div>
-                <div class="line system">Type <span style="color:#a0d8c0">HELP</span> for commands. Type anything else to route through the card engine.</div>
-                <div class="line system">──────────────────────────────────────────</div>
-            </div>
+            <div class="output-area" id="output"></div>
         </div>
-
-        <!-- SIDE PANEL -->
         <div class="side-panel" id="sidePanel">
             <div class="side-section">
                 <h3>🃏 Card Deck</h3>
-                <div id="cardList">
-                    <div class="card-status"><span class="dot waiting"></span><span class="card-name">Loading...</span></div>
-                </div>
+                <div id="cardList"></div>
             </div>
             <div class="side-section">
-                <h3>📊 Decision Stats</h3>
-                <div id="decisionStats">
-                    <div class="stat-row"><span class="label">Decisions</span><span class="value">0</span></div>
-                    <div class="stat-row"><span class="label">Session</span><span class="value" id="sidDisplay">—</span></div>
-                    <div class="stat-row"><span class="label">Classifier</span><span class="value" id="classifierDisplay">—</span></div>
-                    <div class="stat-row"><span class="label">ML Ready</span><span class="value" id="mlDisplay">—</span></div>
-                </div>
+                <h3>📊 System</h3>
+                <div id="sysStats"></div>
             </div>
             <div class="side-section">
                 <h3>📋 Last Vote</h3>
-                <div id="lastVote" style="color: var(--card-meta);">No votes yet.</div>
+                <div id="lastVote" style="color:var(--card-meta);">No votes yet.</div>
             </div>
             <div class="side-section">
-                <h3>⚡ Recent Actions</h3>
-                <div id="recentActions" style="color: var(--card-meta); max-height: 200px; overflow-y: auto;">
-                    No actions yet.
-                </div>
+                <h3>⚡ Recent</h3>
+                <div id="recentActions" style="color:var(--card-meta); max-height:200px; overflow-y:auto;"></div>
             </div>
         </div>
     </div>
@@ -362,18 +240,12 @@
     <!-- INPUT -->
     <div class="input-bar">
         <span style="color:var(--accent);font-weight:bold;">⟩</span>
-        <input 
-            type="text" 
-            id="userInput" 
-            placeholder="Speak to Artemis..." 
-            autocomplete="off"
-            onkeydown="if(event.key==='Enter')sendCommand()"
-        >
+        <input type="text" id="userInput" placeholder="Speak to Artemis..." autocomplete="off"
+            onkeydown="if(event.key==='Enter')sendCommand()">
         <button id="btnSend" onclick="sendCommand()">SEND</button>
     </div>
 
-    <!-- SCRIPTS -->
-    <!-- Card Registry & Modules -->
+    <!-- SCRIPTS — Single source of truth load order -->
     <script src="cards/config.js"></script>
     <script src="cards/decisionLog.js"></script>
     <script src="cards/gaiaRecall.js"></script>
@@ -381,119 +253,84 @@
     <script src="cards/pollinationsImage.js"></script>
     <script src="cards/browserHunt.js"></script>
     <script src="cards/compress.js"></script>
-    
-    <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Transformers.js (optional, for ML classifier) -->
-    <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2"></script>
-    
-    <!-- Artemis Agent Engine -->
     <script src="agent.js"></script>
 
     <script>
-        // ============================================
-        // TERMINAL CONTROLLER
-        // ============================================
-        let currentMode = 'AUTO'; // AUTO | MANUAL
+        let currentMode = 'AUTO';
         let isProcessing = false;
         let commandHistory = [];
         let historyIndex = -1;
+        let lastVotedCards = [];
 
-        // ============================================
-        // INITIALIZATION
-        // ============================================
+        // === BOOT ===
         async function boot() {
-            printSystem('Initializing Artemis EaldfornAI Router...');
-            
-            const success = await ArtemisAgent.init({
-                supabaseUrl: 'https://nbdvavzqvxrlxhsbrluz.supabase.co',
-                supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZHZhdnpxdnhyeGhzYnJsdXoiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc0Nzk5MjUzMCwiZXhwIjoyMDYzNTY4NTMwfQ.fOe0L7hUwKeIGmm7s7uSJmkhSWJqMpFZdOUyTEhdEII'
-            });
+            printSystem('╔══════════════════════════════════════════╗');
+            printSystem('║   ARTEMIS TERMINAL — EaldfornAI v2.1    ║');
+            printSystem('║   Card Router Engine — Heuristic        ║');
+            printSystem('║   Monastery Phase-Lock: ACTIVE          ║');
+            printSystem('╚══════════════════════════════════════════╝');
+            printSystem('');
+            printSystem('Initializing Artemis Agent...');
+
+            const success = await ArtemisAgent.init();
 
             if (success) {
                 const status = ArtemisAgent.getStatus();
-                document.getElementById('initLine').textContent = 
-                    `[SYS] ✓ Initialized. ${status.cardsLoaded} cards loaded. Session: ${status.sessionId.substring(0, 12)}...`;
+                printSystem('✓ Initialized — ' + status.cardsLoaded + ' cards loaded');
+                printSystem('  Session: ' + (status.sessionId || '').substring(0, 16) + '...');
+                printSystem('  Classifier: ' + status.classifierMode);
+                printSystem('  Supabase: ' + (status.supabaseConnected ? 'connected' : 'offline'));
                 document.getElementById('statusBadge').textContent = '● ONLINE';
                 document.getElementById('statusBadge').className = 'badge online';
-                if (status.mlReady) {
-                    document.getElementById('learningBadge').style.display = 'inline';
-                }
                 updateSidePanel();
             } else {
-                document.getElementById('initLine').textContent = '[SYS] ✗ Initialization failed. Check console.';
+                printSystem('✗ Initialization failed. Check console.');
                 document.getElementById('statusBadge').textContent = '● OFFLINE';
                 document.getElementById('statusBadge').className = 'badge';
             }
 
+            printSystem('──────────────────────────────────────────');
+            printSystem('Type HELP for commands. Anything else routes through the card engine.');
             document.getElementById('userInput').focus();
         }
 
-        // ============================================
-        // COMMAND HANDLING
-        // ============================================
+        // === SEND COMMAND ===
         async function sendCommand() {
             if (isProcessing) return;
-
             const inputEl = document.getElementById('userInput');
             const input = inputEl.value.trim();
-            
             if (!input) return;
 
-            // Add to history
             commandHistory.push(input);
             historyIndex = commandHistory.length;
-            
-            // Clear input
             inputEl.value = '';
 
-            // Print user command
             printUser(input);
 
-            // Check for terminal commands
-            if (handleTerminalCommand(input)) {
-                return;
-            }
+            if (handleTerminalCommand(input)) return;
 
-            // Route through Artemis Agent
             isProcessing = true;
             document.getElementById('btnSend').disabled = true;
             document.getElementById('btnSend').textContent = '...';
 
-            // If MANUAL mode, show card vote before executing
             if (currentMode === 'MANUAL') {
-                printSystem('[MANUAL] Would route through card engine. Type APPROVE to execute or REJECT to skip.');
-                // In manual mode, we wait for APPROVE
-                // For now, we'll auto-approve after showing votes
-                // (Full manual approval flow would need more state management)
+                printSystem('[MANUAL] Routing through card engine...');
             }
 
             try {
                 const startTime = performance.now();
-                
-                // Show classification in terminal
-                printSeparator();
-                printSystem('🃏 Classifying input...');
-                
                 const result = await ArtemisAgent.processInput(input);
-                
                 const elapsed = (performance.now() - startTime).toFixed(0);
-                
-                // Show what cards were played
+
                 if (result.metadata && result.metadata.cardsPlayed) {
-                    const cardNames = result.metadata.cardsPlayed.join(', ');
-                    printSystem(`✓ Cards played: ${cardNames} (${elapsed}ms)`);
+                    lastVotedCards = result.metadata.cardsPlayed;
+                    printSystem('✓ Cards played: ' + result.metadata.cardsPlayed.join(', ') + ' (' + elapsed + 'ms)');
                 }
 
-                // Show result
                 printSeparator();
-                if (result.text) {
-                    printResult(result.text);
-                }
-                if (result.imageUrl) {
-                    printImage(result.imageUrl);
-                }
+                if (result.text) printResult(result.text);
+                if (result.imageUrl) printImage(result.imageUrl);
                 printSeparator();
 
             } catch (err) {
@@ -504,80 +341,50 @@
             isProcessing = false;
             document.getElementById('btnSend').disabled = false;
             document.getElementById('btnSend').textContent = 'SEND';
-            
-            // Update side panel
             updateSidePanel();
-            
-            // Scroll to bottom
             scrollToBottom();
         }
 
         function handleTerminalCommand(input) {
             const upper = input.toUpperCase().trim();
-
             switch (upper) {
-                case 'HELP':
-                    showHelp();
-                    return true;
-                case 'STATUS':
-                    showStatus();
-                    return true;
-                case 'CLEAR':
-                    clearTerminal();
-                    return true;
-                case 'CARDS':
-                    showCards();
-                    return true;
-                case 'HISTORY':
-                    showHistory();
-                    return true;
-                case 'WEIGHTS':
-                    showWeights();
-                    return true;
-                case 'APPROVE':
-                    printSystem('[MANUAL] Approved. Executing last voted cards...');
-                    // In full implementation, this would execute the pending cards
-                    return true;
-                case 'REJECT':
-                    printSystem('[MANUAL] Rejected. Cards discarded.');
-                    return true;
-                default:
-                    return false;
+                case 'HELP': showHelp(); return true;
+                case 'STATUS': showStatus(); return true;
+                case 'CARDS': showCards(); return true;
+                case 'WEIGHTS': showWeights(); return true;
+                case 'HISTORY': showHistory(); return true;
+                case 'CLEAR': clearTerminal(); return true;
+                default: return false;
             }
         }
 
-        // ============================================
-        // TERMINAL COMMANDS
-        // ============================================
+        // === COMMANDS ===
         function showHelp() {
             printSystem('');
-            printSystem('╔══════════════════════════════════════════╗');
-            printSystem('║   ARTEMIS TERMINAL — COMMANDS           ║');
-            printSystem('╠══════════════════════════════════════════╣');
-            printSystem('║  HELP     — Show this message           ║');
-            printSystem('║  STATUS   — Show system status          ║');
-            printSystem('║  CARDS    — List all cards in deck      ║');
-            printSystem('║  WEIGHTS  — Show learned card weights   ║');
-            printSystem('║  HISTORY  — Show recent decisions       ║');
-            printSystem('║  CLEAR    — Clear terminal              ║');
-            printSystem('║  AUTO     — Switch to auto mode         ║');
-            printSystem('║  MANUAL   — Switch to manual mode       ║');
-            printSystem('║  Anything else → Route to card engine   ║');
-            printSystem('╚══════════════════════════════════════════╝');
+            printSystem('┌─── COMMANDS ────────────────────────────┐');
+            printSystem('│  HELP     — This message                │');
+            printSystem('│  STATUS   — System status               │');
+            printSystem('│  CARDS    — List all cards              │');
+            printSystem('│  WEIGHTS  — Learned card weights        │');
+            printSystem('│  HISTORY  — Recent decisions            │');
+            printSystem('│  CLEAR    — Clear terminal              │');
+            printSystem('│  AUTO     — Auto-execute mode           │');
+            printSystem('│  MANUAL   — Manual approval mode        │');
+            printSystem('└──────────────────────────────────────────┘');
             printSystem('');
         }
 
         function showStatus() {
-            const status = ArtemisAgent.getStatus();
+            const s = ArtemisAgent.getStatus();
             printSystem('');
             printSystem('┌─── SYSTEM STATUS ───────────────────────┐');
-            printSystem(`│  Initialized:    ${String(status.initialized).padEnd(27)}│`);
-            printSystem(`│  Cards Loaded:   ${String(status.cardsLoaded).padEnd(27)}│`);
-            printSystem(`│  Decisions:      ${String(status.decisionCount).padEnd(27)}│`);
-            printSystem(`│  Session:        ${(status.sessionId || '—').substring(0, 20).padEnd(27)}│`);
-            printSystem(`│  Classifier:     ${status.classifierMode.padEnd(27)}│`);
-            printSystem(`│  ML Ready:       ${String(status.mlReady).padEnd(27)}│`);
-            printSystem(`│  Mode:           ${currentMode.padEnd(27)}│`);
+            printSystem('│  Initialized:  ' + String(s.initialized).padEnd(27) + '│');
+            printSystem('│  Cards Loaded: ' + String(s.cardsLoaded).padEnd(27) + '│');
+            printSystem('│  Decisions:    ' + String(s.decisionCount).padEnd(27) + '│');
+            printSystem('│  Session:      ' + (s.sessionId||'').substring(0,20).padEnd(27) + '│');
+            printSystem('│  Classifier:   ' + s.classifierMode.padEnd(27) + '│');
+            printSystem('│  Supabase:     ' + (s.supabaseConnected?'connected':'offline').padEnd(27) + '│');
+            printSystem('│  Mode:         ' + currentMode.padEnd(27) + '│');
             printSystem('└──────────────────────────────────────────┘');
             printSystem('');
         }
@@ -589,9 +396,9 @@
             cards.forEach(c => {
                 const icon = c.icon || '🃏';
                 const name = c.name.padEnd(22);
-                const cat = (c.category || '—').padEnd(12);
-                const weight = c.weight ? c.weight.toFixed(2) : '0.50';
-                printSystem(`│ ${icon} ${name} ${cat} w:${weight} │`);
+                const cat = (c.category||'—').padEnd(12);
+                const w = (c.weight||0).toFixed(2);
+                printSystem('│ ' + icon + ' ' + name + ' ' + cat + ' w:' + w + ' │');
             });
             printSystem('└──────────────────────────────────────────┘');
             printSystem('');
@@ -603,10 +410,10 @@
             printSystem('┌─── LEARNED WEIGHTS ─────────────────────┐');
             cards.forEach(c => {
                 const name = c.name.padEnd(22);
-                const plays = String(c.playCount || 0).padStart(4);
-                const successes = String(c.successCount || 0).padStart(4);
-                const weight = c.weight ? c.weight.toFixed(3) : '0.500';
-                printSystem(`│ ${name} plays:${plays} ✓:${successes} w:${weight} │`);
+                const plays = String(c.playCount||0).padStart(4);
+                const succ = String(c.successCount||0).padStart(4);
+                const w = (c.weight||0).toFixed(3);
+                printSystem('│ ' + name + ' plays:' + plays + ' ✓:' + succ + ' w:' + w + ' │');
             });
             printSystem('└──────────────────────────────────────────┘');
             printSystem('');
@@ -614,23 +421,21 @@
 
         function showHistory() {
             try {
-                const history = JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]');
+                const hist = JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]');
                 printSystem('');
                 printSystem('┌─── RECENT ACTIONS ──────────────────────┐');
-                if (history.length === 0) {
-                    printSystem('│  No actions recorded yet.               │');
+                if (hist.length === 0) {
+                    printSystem('│  No actions recorded.                   │');
                 } else {
-                    history.slice(-10).forEach((action, i) => {
-                        const time = new Date(action.timestamp).toLocaleTimeString();
-                        const input = (action.input || '').substring(0, 30).padEnd(30);
-                        printSystem(`│ ${time} ${input} │`);
+                    hist.slice(-10).forEach(a => {
+                        const time = new Date(a.timestamp).toLocaleTimeString();
+                        const inp = (a.input||'').substring(0,35).padEnd(35);
+                        printSystem('│ ' + time + ' ' + inp + ' │');
                     });
                 }
                 printSystem('└──────────────────────────────────────────┘');
                 printSystem('');
-            } catch (err) {
-                printError('Failed to read history: ' + err.message);
-            }
+            } catch (e) { printError('Failed: ' + e.message); }
         }
 
         function clearTerminal() {
@@ -638,132 +443,88 @@
             printSystem('Terminal cleared. Artemis awaits.');
         }
 
-        // ============================================
-        // MODE SWITCHING
-        // ============================================
         function setMode(mode) {
             currentMode = mode;
             document.getElementById('btnAuto').className = mode === 'AUTO' ? 'active' : '';
             document.getElementById('btnManual').className = mode === 'MANUAL' ? 'active' : '';
-            printSystem(`[MODE] Switched to ${mode} mode.`);
+            printSystem('[MODE] ' + mode);
         }
 
-        // ============================================
-        // OUTPUT HELPERS
-        // ============================================
-        function printSystem(text) {
-            appendLine(text, 'system');
-        }
-
-        function printUser(text) {
-            appendLine('⟩ ' + text, 'user');
-        }
-
-        function printResult(text) {
-            // Split multi-line results
-            const lines = text.split('\n');
-            lines.forEach(line => {
-                appendLine(line, 'result');
-            });
-        }
+        // === OUTPUT HELPERS ===
+        function printSystem(t) { appendLine(t, 'system'); }
+        function printUser(t) { appendLine('⟩ ' + t, 'user'); }
+        function printResult(t) { t.split('\n').forEach(l => appendLine(l, 'result')); }
+        function printError(t) { appendLine('[ERR] ' + t, 'error'); }
+        function printSeparator() { appendLine('──────────────────────────────────────────', 'system'); }
 
         function printImage(url) {
-            const output = document.getElementById('output');
+            const out = document.getElementById('output');
             const img = document.createElement('img');
             img.src = url;
-            img.alt = 'Generated Image';
+            img.alt = 'Generated';
             img.onerror = () => {
-                const errLine = document.createElement('div');
-                errLine.className = 'line error';
-                errLine.textContent = '[IMG] Failed to load image. URL may be invalid.';
-                output.appendChild(errLine);
+                const err = document.createElement('div');
+                err.className = 'line error';
+                err.textContent = '[IMG] Failed to load';
+                out.appendChild(err);
             };
-            output.appendChild(img);
-            const caption = document.createElement('div');
-            caption.className = 'line system';
-            caption.textContent = '[IMG] ' + url.substring(0, 80) + '...';
-            output.appendChild(caption);
+            out.appendChild(img);
+            appendLine('[IMG] ' + url.substring(0,80) + '...', 'system');
         }
 
-        function printError(text) {
-            appendLine('[ERR] ' + text, 'error');
-        }
-
-        function printSeparator() {
-            appendLine('──────────────────────────────────────────', 'system');
-        }
-
-        function appendLine(text, className) {
-            const output = document.getElementById('output');
-            const line = document.createElement('div');
-            line.className = 'line ' + (className || '');
-            line.textContent = text;
-            output.appendChild(line);
-            scrollToBottom();
+        function appendLine(text, cls) {
+            const out = document.getElementById('output');
+            const div = document.createElement('div');
+            div.className = 'line ' + (cls||'');
+            div.textContent = text;
+            out.appendChild(div);
         }
 
         function scrollToBottom() {
-            const output = document.getElementById('output');
-            output.scrollTop = output.scrollHeight;
+            const out = document.getElementById('output');
+            out.scrollTop = out.scrollHeight;
         }
 
-        // ============================================
-        // SIDE PANEL UPDATES
-        // ============================================
+        // === SIDE PANEL ===
         function updateSidePanel() {
             const status = ArtemisAgent.getStatus();
-            
-            // Card list
             const cards = ArtemisAgent.getCardRegistry();
-            const cardListEl = document.getElementById('cardList');
-            cardListEl.innerHTML = cards.map(c => {
-                const dotClass = c.weight > 0.3 ? 'ready' : 'waiting';
-                const catColor = {
-                    'meta': 'var(--card-meta)',
-                    'memory': 'var(--card-memory)',
-                    'retrieval': 'var(--card-retrieval)',
-                    'generation': 'var(--card-generation)'
-                }[c.category] || 'var(--card-meta)';
-                return `
-                    <div class="card-status">
-                        <span class="dot ${dotClass}" style="background:${catColor};"></span>
-                        <span class="card-name">${c.icon || ''} ${c.name}</span>
-                        <span class="card-weight">${(c.weight || 0).toFixed(2)}</span>
-                    </div>
-                `;
+
+            document.getElementById('cardList').innerHTML = cards.map(c => {
+                const dotClass = (c.weight||0) > 0.3 ? 'ready' : 'waiting';
+                const catColors = { meta:'var(--card-meta)', memory:'var(--card-memory)', retrieval:'var(--card-retrieval)', generation:'var(--card-generation)' };
+                const color = catColors[c.category] || 'var(--card-meta)';
+                return `<div class="card-status">
+                    <span class="dot ${dotClass}" style="background:${color};"></span>
+                    <span class="card-name">${c.icon||''} ${c.name}</span>
+                    <span class="card-weight">${(c.weight||0).toFixed(2)}</span>
+                </div>`;
             }).join('');
 
-            // Decision stats
-            document.getElementById('decisionStats').innerHTML = `
+            document.getElementById('sysStats').innerHTML = `
                 <div class="stat-row"><span class="label">Decisions</span><span class="value">${status.decisionCount}</span></div>
-                <div class="stat-row"><span class="label">Session</span><span class="value">${(status.sessionId || '—').substring(0, 12)}...</span></div>
+                <div class="stat-row"><span class="label">Session</span><span class="value">${(status.sessionId||'').substring(0,12)}...</span></div>
                 <div class="stat-row"><span class="label">Classifier</span><span class="value">${status.classifierMode}</span></div>
-                <div class="stat-row"><span class="label">ML Ready</span><span class="value">${status.mlReady ? '✓' : '✗'}</span></div>
+                <div class="stat-row"><span class="label">Supabase</span><span class="value">${status.supabaseConnected?'✓':'✗'}</span></div>
             `;
 
-            // Recent actions
+            document.getElementById('lastVote').textContent = lastVotedCards.length > 0
+                ? lastVotedCards.join(', ')
+                : 'No votes yet.';
+
             try {
-                const history = JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]');
-                const recentEl = document.getElementById('recentActions');
-                if (history.length === 0) {
-                    recentEl.innerHTML = '<span style="color:var(--card-meta);">No actions yet.</span>';
-                } else {
-                    recentEl.innerHTML = history.slice(-8).reverse().map(a => {
+                const hist = JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]');
+                document.getElementById('recentActions').innerHTML = hist.length === 0
+                    ? '<span style="color:var(--card-meta);">No actions yet.</span>'
+                    : hist.slice(-8).reverse().map(a => {
                         const time = new Date(a.timestamp).toLocaleTimeString();
-                        const input = (a.input || '').substring(0, 40);
-                        return `<div style="margin-bottom:4px;"><span style="color:var(--card-meta);">${time}</span> ${input}</div>`;
+                        return `<div style="margin-bottom:4px;"><span style="color:var(--card-meta);">${time}</span> ${(a.input||'').substring(0,40)}</div>`;
                     }).join('');
-                }
-            } catch (err) {
-                // silent
-            }
+            } catch(e) {}
         }
 
-        // ============================================
-        // KEYBOARD HANDLING
-        // ============================================
+        // === KEYBOARD ===
         document.addEventListener('keydown', function(e) {
-            // Up arrow: previous command
             if (e.key === 'ArrowUp' && document.activeElement === document.getElementById('userInput')) {
                 e.preventDefault();
                 if (historyIndex > 0) {
@@ -771,7 +532,6 @@
                     document.getElementById('userInput').value = commandHistory[historyIndex] || '';
                 }
             }
-            // Down arrow: next command
             if (e.key === 'ArrowDown' && document.activeElement === document.getElementById('userInput')) {
                 e.preventDefault();
                 if (historyIndex < commandHistory.length - 1) {
@@ -784,9 +544,6 @@
             }
         });
 
-        // ============================================
-        // BOOT
-        // ============================================
         boot().catch(err => {
             printError('Boot failed: ' + err.message);
             console.error(err);

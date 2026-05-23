@@ -109,6 +109,28 @@ const ARTEMIS_CARD_DECK = [
         cardFile: 'compress.js'
     },
     {
+    id: 'browser_model',
+    name: 'Browser Model',
+    icon: '🧠',
+    category: 'generation',
+    description: 'Local LLM running in-browser via WebLLM + WebGPU — zero API, fully offline after cache',
+    matchPatterns: [
+        'generate', 'write', 'create', 'tell me', 'explain',
+        'describe', 'story', 'poem', 'text', 'say', 'what is',
+        'how to', 'why', 'think', 'imagine', 'compose',
+        'what do you know', 'what do you remember', 'audit',
+        'status', 'report'
+    ],
+    defaultWeight: 0.5,
+    requires: [],
+    produces: ['text_output', 'model_response'],
+    timeout: 120000, // 2 min — first load downloads model
+    retryOnFail: false,
+    maxRetries: 1,
+    execute: null,
+    cardFile: 'browserModel.js'
+}
+    {
         id: 'decision_log',
         name: 'Decision Logger',
         icon: '📊',

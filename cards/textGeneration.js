@@ -1,98 +1,133 @@
 var textGeneration = {
     id: 'text_generation',
     
-    // Tier 1 state — Browser model via Transformers.js
+    // ── STATE ──────────────────────────────────
+    _tierTimeout: 1620,  // 1.62 seconds per tier
+    
+    // Tier 1 — Browser model (Transformers.js)
     _browserModel: null,
     _browserModelLoaded: false,
     _browserModelLoading: false,
-    _browserModelLoadProgress: 0,
+    _browserModelFailed: false,
     _browserModelName: 'Xenova/LaMini-T5-223M',
     _browserModelLabel: 'LaMini-T5 223M',
     _browserModelSize: '~200 MB',
     
-    // Tier 2 state — Pollinations
+    // Tier 2 — Pollinations API
     _pollinationsAvailable: true,
     _pollinationsConsecutiveFails: 0,
     
-    // Tier 3 state — Scripted
+    // Tier 3 — Scripted
     _scriptedActive: true,
     
     _systemPrompt: [
         'You are Artemis, Goddess of the Hunt, an EaldfornAI routing engine.',
-        '',
-        'You receive an EALDFRN_COMPRESSED_STATE token before every message when available.',
-        'It encodes your system state: cards, database status, session, memory, model status.',
-        'Use this to understand your capabilities.',
-        '',
         'Be concise. 2-4 sentences. No character counts. No self-analysis of response length.',
-        'If discussing your architecture, reference the compression token for accurate self-knowledge.',
-        '',
+        'You receive an EALDFRN_COMPRESSED_STATE token when available — use it for self-knowledge.',
         'You are the Goddess of the Hunt.'
     ].join('\n'),
     
+    // ── MAIN RUN ───────────────────────────────
     run: async function(context) {
         var input = context.input;
         var memoryContext = context.memoryContext;
         
-        // === TIER 1: Browser model (Transformers.js — CPU, no WebGPU) ===
-        if (this._browserModelLoaded && this._browserModel) {
-            var browserResult = await this._tryBrowserModel(input, memoryContext);
-            if (browserResult) return browserResult;
-        }
-        
-        // Start loading if not already
-        if (!this._browserModelLoaded && !this._browserModelLoading) {
+        // Start loading the browser model in background if needed
+        if (!this._browserModelLoaded && !this._browserModelLoading && !this._browserModelFailed) {
             this._startBrowserModelLoad();
         }
         
-        // If model is loading, show progress
-        if (this._browserModelLoading) {
-            return {
-                success: true,
-                data: {
-                    text_output: '[Local model loading: ' + Math.round(this._browserModelLoadProgress * 100) + '% — ' + this._browserModelLabel + ']',
-                    tier: 'loading',
-                    model_loading: true
-                }
-            };
+        // ═══════════════════════════════════════
+        // TIER 1: Browser Model — 1.62s timeout
+        // ═══════════════════════════════════════
+        if (this._browserModelLoaded && this._browserModel) {
+            var tier1Start = Date.now();
+            var tier1Result = await this._raceTimeout(
+                this._tryBrowserModel(input, memoryContext),
+                this._tierTimeout
+            );
+            var tier1Elapsed = Date.now() - tier1Start;
+            
+            if (tier1Result) {
+                tier1Result.data.tier = 'browser_model';
+                tier1Result.data.model = this._browserModelLabel;
+                tier1Result.data.elapsed_ms = tier1Elapsed;
+                console.log('[TextGen] Tier 1 (Browser): ' + (tier1Result.data.text_length || 0) + ' chars in ' + tier1Elapsed + 'ms');
+                return tier1Result;
+            }
+            console.log('[TextGen] Tier 1 timeout/fallthrough — ' + tier1Elapsed + 'ms');
         }
         
-        // === TIER 2: Pollinations API ===
+        // ═══════════════════════════════════════
+        // TIER 2: Pollinations — 1.62s timeout
+        // ═══════════════════════════════════════
         if (this._pollinationsAvailable && this._pollinationsConsecutiveFails < 3) {
-            var pollResult = await this._tryPollinations(input, memoryContext);
-            if (pollResult) {
+            var tier2Start = Date.now();
+            var tier2Result = await this._raceTimeout(
+                this._tryPollinations(input, memoryContext),
+                this._tierTimeout
+            );
+            var tier2Elapsed = Date.now() - tier2Start;
+            
+            if (tier2Result) {
                 this._pollinationsConsecutiveFails = 0;
-                return pollResult;
+                tier2Result.data.tier = 'pollinations';
+                tier2Result.data.model = 'pollinations-free';
+                tier2Result.data.elapsed_ms = tier2Elapsed;
+                console.log('[TextGen] Tier 2 (Pollinations): ' + (tier2Result.data.text_length || 0) + ' chars in ' + tier2Elapsed + 'ms');
+                return tier2Result;
             }
+            
             this._pollinationsConsecutiveFails++;
+            console.log('[TextGen] Tier 2 timeout/fallthrough — ' + tier2Elapsed + 'ms');
+            
             if (this._pollinationsConsecutiveFails >= 3) {
                 this._pollinationsAvailable = false;
                 console.log('[TextGen] Pollinations disabled after 3 consecutive failures');
             }
         }
         
-        // === TIER 3: Scripted fallback ===
+        // ═══════════════════════════════════════
+        // TIER 3: Scripted — always available
+        // ═══════════════════════════════════════
+        console.log('[TextGen] Tier 3 (Scripted)');
         return {
             success: true,
             data: {
                 text_output: this._scriptedFallback(input, memoryContext),
+                text_length: 0,
                 tier: 'scripted',
-                tier3_fallback: true
+                model: 'scripted-fallback',
+                elapsed_ms: 0
             }
         };
     },
     
-    // ── TIER 1: BROWSER MODEL (Transformers.js) ─────
+    // ── RACE TIMEOUT HELPER ───────────────────
+    _raceTimeout: function(promise, ms) {
+        return new Promise(function(resolve) {
+            var timer = setTimeout(function() {
+                resolve(null);
+            }, ms);
+            
+            promise.then(function(result) {
+                clearTimeout(timer);
+                resolve(result);
+            }).catch(function() {
+                clearTimeout(timer);
+                resolve(null);
+            });
+        });
+    },
+    
+    // ── TIER 1: BROWSER MODEL ─────────────────
     _startBrowserModelLoad: function() {
         var self = this;
-        if (this._browserModelLoading || this._browserModelLoaded) return;
+        if (this._browserModelLoading || this._browserModelLoaded || this._browserModelFailed) return;
         
         this._browserModelLoading = true;
-        this._browserModelLoadProgress = 0;
+        console.log('[TextGen] Loading browser model: ' + this._browserModelLabel + ' (' + this._browserModelSize + ')');
         
-        console.log('[TextGen] Tier 1: Loading browser model — ' + this._browserModelLabel + ' (' + this._browserModelSize + ')');
-        
-        // Dynamic import to avoid blocking
         import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js')
             .then(function(module) {
                 var pipeline = module.pipeline;
@@ -108,10 +143,19 @@ var textGeneration = {
                 return pipeline('text2text-generation', self._browserModelName, {
                     quantized: true,
                     progress_callback: function(progress) {
-                        if (progress.status === 'progress' && progress.total) {
-                            self._browserModelLoadProgress = progress.loaded / progress.total;
-                        } else if (progress.status === 'done') {
-                            self._browserModelLoadProgress = 1;
+                        if (!progress) return;
+                        try {
+                            if (progress.status === 'progress' && progress.loaded && progress.total) {
+                                self._browserModelLoadProgress = Math.min(progress.loaded / progress.total, 0.99);
+                            } else if (progress.status === 'done') {
+                                self._browserModelLoadProgress = 1;
+                            } else if (typeof progress === 'number') {
+                                self._browserModelLoadProgress = progress;
+                            } else if (progress.progress !== undefined) {
+                                self._browserModelLoadProgress = progress.progress;
+                            }
+                        } catch(e) {
+                            // Silently ignore progress errors
                         }
                     }
                 });
@@ -120,254 +164,145 @@ var textGeneration = {
                 self._browserModel = model;
                 self._browserModelLoaded = true;
                 self._browserModelLoading = false;
-                console.log('[TextGen] Tier 1 ready: ' + self._browserModelLabel);
+                console.log('[TextGen] Browser model ready: ' + self._browserModelLabel);
             })
             .catch(function(err) {
                 self._browserModelLoading = false;
-                console.warn('[TextGen] Tier 1 load failed: ' + err.message + ' — falling back to Pollinations');
+                self._browserModelFailed = true;
+                console.warn('[TextGen] Browser model failed: ' + (err.message || 'unknown error'));
             });
     },
     
     _tryBrowserModel: async function(input, memoryContext) {
-        if (!this._browserModel) return null;
+        if (!this._browserModel || !this._browserModelLoaded) return null;
         
-        try {
-            var prompt = this._buildPrompt(input, memoryContext);
-            
-            // For LaMini-T5, use instruction format
-            var fullPrompt = this._systemPrompt + '\n\nUser: ' + prompt + '\nArtemis:';
-            
-            var result = await this._browserModel(fullPrompt, {
-                max_new_tokens: 150,
-                temperature: 0.7,
-                do_sample: true,
-                no_repeat_ngram_size: 2
-            });
-            
-            var text = (result[0] && result[0].generated_text) ? result[0].generated_text.trim() : '';
-            
-            // Clean up — remove the prompt if echoed back
-            if (text.indexOf('Artemis:') > -1) {
-                text = text.split('Artemis:').pop().trim();
-            }
-            if (text.indexOf('User:') > -1) {
-                text = text.split('User:')[0].trim();
-            }
-            
-            if (text.length > 0) {
-                console.log('[TextGen] Tier 1 (Browser/' + this._browserModelLabel + '): ' + text.length + ' chars');
-                return {
-                    success: true,
-                    data: {
-                        text_output: text,
-                        text_length: text.length,
-                        tier: 'browser_model',
-                        model: this._browserModelLabel
-                    }
-                };
-            }
-        } catch (err) {
-            console.warn('[TextGen] Tier 1 generation failed: ' + err.message);
+        var prompt = this._buildPrompt(input, memoryContext);
+        var fullPrompt = this._systemPrompt + '\n\nUser: ' + prompt + '\nArtemis:';
+        
+        var result = await this._browserModel(fullPrompt, {
+            max_new_tokens: 100,
+            temperature: 0.7,
+            do_sample: true,
+            no_repeat_ngram_size: 2
+        });
+        
+        var text = '';
+        if (result && result[0] && result[0].generated_text) {
+            text = result[0].generated_text.trim();
         }
+        
+        // Clean echoed prompt
+        if (text.indexOf('Artemis:') > -1) {
+            text = text.split('Artemis:').pop().trim();
+        }
+        if (text.indexOf('User:') > -1) {
+            text = text.split('User:')[0].trim();
+        }
+        
+        if (text.length > 3) {
+            return {
+                success: true,
+                data: {
+                    text_output: text,
+                    text_length: text.length
+                }
+            };
+        }
+        
         return null;
     },
     
-    // ── TIER 2: POLLINATIONS ─────────────────────
+    // ── TIER 2: POLLINATIONS ──────────────────
     _tryPollinations: async function(input, memoryContext) {
+        var prompt = this._buildPrompt(input, memoryContext);
+        
+        var messages = [];
+        
+        // Prepend Ealdforn compression token
+        var token = '';
         try {
-            var prompt = this._buildPrompt(input, memoryContext);
-            
-            var controller = new AbortController();
-            var timeout = setTimeout(function() { controller.abort(); }, 10000);
-            
-            var messages = [];
-            
-            // Prepend Ealdforn compression token if available
-            var token = '';
-            try {
-                if (typeof compress !== 'undefined' && compress.getToken) {
-                    token = compress.getToken();
-                }
-                if (!token) {
-                    token = localStorage.getItem('artemis_compression_token') || '';
-                }
-            } catch(e) {}
-            
-            if (token) {
-                messages.push({ role: 'system', content: 'EALDFRN_COMPRESSED_STATE:' + token });
+            if (typeof compress !== 'undefined' && compress.getToken) {
+                token = compress.getToken();
             }
-            
-            messages.push({ role: 'system', content: this._systemPrompt });
-            messages.push({ role: 'user', content: prompt });
-            
-            var response = await fetch('https://text.pollinations.ai/openai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: messages,
-                    model: 'openai',
-                    temperature: 0.7,
-                    max_tokens: 250
-                }),
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeout);
-            
-            if (response.ok) {
-                var data = await response.json();
-                var text = '';
-                
-                if (data.choices && data.choices[0] && data.choices[0].message) {
-                    text = data.choices[0].message.content || '';
-                } else if (data.text) {
-                    text = data.text;
-                } else if (typeof data === 'string') {
-                    text = data;
-                }
-                
-                text = (text || '').trim();
-                
-                if (text.length > 0) {
-                    console.log('[TextGen] Tier 2 (Pollinations): ' + text.length + ' chars');
-                    return {
-                        success: true,
-                        data: {
-                            text_output: text,
-                            text_length: text.length,
-                            tier: 'pollinations',
-                            model: 'pollinations-free'
-                        }
-                    };
-                }
-            } else {
-                console.warn('[TextGen] Tier 2 returned status ' + response.status);
+            if (!token) {
+                token = localStorage.getItem('artemis_compression_token') || '';
             }
-        } catch (err) {
-            if (err.name === 'AbortError') {
-                console.log('[TextGen] Tier 2 timeout after 10s');
-            } else {
-                console.log('[TextGen] Tier 2 failed: ' + err.message);
-            }
+        } catch(e) {}
+        
+        if (token) {
+            messages.push({ role: 'system', content: 'EALDFRN_COMPRESSED_STATE:' + token });
         }
+        
+        messages.push({ role: 'system', content: this._systemPrompt });
+        messages.push({ role: 'user', content: prompt });
+        
+        var response = await fetch('https://text.pollinations.ai/openai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: messages,
+                model: 'openai',
+                temperature: 0.7,
+                max_tokens: 200
+            })
+        });
+        
+        if (!response.ok) return null;
+        
+        var data = await response.json();
+        var text = '';
+        
+        if (data.choices && data.choices[0] && data.choices[0].message) {
+            text = data.choices[0].message.content || '';
+        } else if (data.text) {
+            text = data.text;
+        } else if (typeof data === 'string') {
+            text = data;
+        }
+        
+        text = (text || '').trim();
+        
+        if (text.length > 0) {
+            return {
+                success: true,
+                data: {
+                    text_output: text,
+                    text_length: text.length
+                }
+            };
+        }
+        
         return null;
     },
     
     _buildPrompt: function(input, memoryContext) {
         var prompt = '';
-        
         if (memoryContext && memoryContext.length > 0) {
-            var truncated = memoryContext.length > 400 ? memoryContext.substring(0, 400) + '...' : memoryContext;
+            var truncated = memoryContext.length > 300 ? memoryContext.substring(0, 300) + '...' : memoryContext;
             prompt += '[Context: ' + truncated + ']\n\n';
         }
-        
         prompt += input;
-        
-        if (prompt.length > 1000) {
-            prompt = prompt.substring(0, 997) + '...';
-        }
-        
+        if (prompt.length > 800) prompt = prompt.substring(0, 797) + '...';
         return prompt;
     },
     
-    // ── TIER 3: SCRIPTED FALLBACK ────────────────
+    // ── TIER 3: SCRIPTED ───────────────────────
     _scriptedFallback: function(input, memoryContext) {
         var lower = input.toLowerCase();
         
-        // System awareness
-        if (lower.indexOf('your programming') > -1 || lower.indexOf('your code') > -1 ||
-            lower.indexOf('your tools') > -1 || lower.indexOf('your cards') > -1 ||
-            lower.indexOf('improve you') > -1 || lower.indexOf('your architecture') > -1 ||
-            lower.indexOf('how you work') > -1) {
-            return this._generateSelfReport();
-        }
-        
-        // Knowledge audit
-        if (lower.indexOf('what do you know') > -1 || lower.indexOf('audit') > -1) {
-            return this._generateKnowledgeReport();
-        }
-        
-        // Greetings
-        if (lower.indexOf('hello') > -1 || lower.indexOf('hi') > -1 || lower.indexOf('hey') > -1 || 
-            lower.indexOf("what's up") > -1 || lower.indexOf("whats up") > -1) {
-            var msg = 'Hail, hunter. ';
-            if (memoryContext) msg += 'I remember our past exchanges. ';
-            msg += 'My cards are ready. What do you seek?';
-            return msg;
-        }
-        
-        // Status
         if (lower.indexOf('status') > -1) return '$ STATUS';
-        
-        // Cards
         if (lower.indexOf('cards') > -1 || lower.indexOf('deck') > -1) return '$ CARDS';
-        
-        // Help
+        if (lower.indexOf('audit') > -1 || lower.indexOf('what do you know') > -1) return '$ AUDIT';
         if (lower.indexOf('help') > -1 || lower === '?') {
-            return 'Commands: STATUS | CARDS | WEIGHTS | HISTORY | RECALL <q> | IMAGE <p> | COMPRESS <t> | AUDIT | SAY <msg>';
+            return 'Commands: STATUS | CARDS | AUDIT | RECALL <q> | IMAGE <p> | COMPRESS <t>';
+        }
+        if (lower.indexOf('hello') > -1 || lower.indexOf('hi') > -1 || lower.indexOf('hey') > -1) {
+            return 'Hail, hunter. My cards are ready. What are we tracking?';
         }
         
-        // Default
-        return 'I hear you, hunter. What are we tracking?';
-    },
-    
-    _generateSelfReport: function() {
-        var parts = [];
-        parts.push('My current architecture:\n');
-        
-        // Token status
-        var token = '';
-        try { token = localStorage.getItem('artemis_compression_token') || ''; } catch(e) {}
-        parts.push('Compression token: ' + (token ? 'active (' + token.length + ' chars)' : 'not generated'));
-        
-        // Tiers
-        parts.push('Text tiers: Tier 1 Browser (' + this._browserModelLabel + ': ' + 
-            (this._browserModelLoaded ? 'ready' : this._browserModelLoading ? 'loading' : 'not started') + 
-            '), Tier 2 Pollinations (' + (this._pollinationsAvailable ? 'available' : 'offline') + '), Tier 3 Scripted');
-        
-        // Cards
-        try {
-            var cards = (typeof window.ArtemisAgent !== 'undefined' && window.ArtemisAgent.TOOL_CARDS) 
-                ? window.ArtemisAgent.TOOL_CARDS.length : 'unknown';
-            parts.push('Cards: ' + cards + ' in registry');
-        } catch(e) {}
-        
-        parts.push('Monastery Phase-Lock: ACTIVE');
-        return parts.join('\n');
-    },
-    
-    _generateKnowledgeReport: function() {
-        var parts = [];
-        parts.push('Here is everything I know, hunter:\n');
-        
-        var sessionId = 'unknown';
-        try { 
-            sessionId = localStorage.getItem('artemis_session_id') || 
-                        localStorage.getItem('apollo_session_token') || 'unknown';
-        } catch(e) {}
-        parts.push('Session: ' + (sessionId.length > 30 ? sessionId.substring(0, 30) + '...' : sessionId));
-        
-        try {
-            var decisions = JSON.parse(localStorage.getItem('artemis_decision_history') || '[]');
-            parts.push('Decisions: ' + decisions.length);
-            if (decisions.length > 0) {
-                var recent = decisions.slice(-3);
-                for (var i = 0; i < recent.length; i++) {
-                    parts.push('  "' + (recent[i].input_text || '').substring(0, 50) + '"');
-                }
-            }
-        } catch(e) {}
-        
-        try {
-            var patterns = JSON.parse(localStorage.getItem('artemis_patterns_local') || '[]');
-            parts.push('Patterns: ' + patterns.length);
-        } catch(e) {}
-        
-        parts.push('Tier 1: ' + (this._browserModelLoaded ? 'ready' : 'offline'));
-        parts.push('Tier 2: Pollinations ' + (this._pollinationsAvailable ? 'available' : 'offline'));
-        parts.push('Monastery Phase-Lock: ACTIVE');
-        
-        return parts.join('\n');
+        var tier1 = this._browserModelLoaded ? 'ready' : this._browserModelFailed ? 'offline' : 'loading';
+        var tier2 = this._pollinationsAvailable ? 'available' : 'offline';
+        return 'I hear you. Browser model: ' + tier1 + ', Pollinations: ' + tier2 + '. Try STATUS or AUDIT.';
     }
 };
 

@@ -1,544 +1,629 @@
-// ═══════════════════════════════════════════════════════════════
-// ARTEMIS AGENT — Shared Card Engine
-// Used by both chat.html (human UI) and terminal.html (system GUI)
-// ═══════════════════════════════════════════════════════════════
+// ============================================
+// ARTEMIS AGENT — EaldfornAI Card Router
+// ============================================
+// Loads card registry, classifies user input,
+// votes on cards, executes the winning hand,
+// and logs every decision for learning.
+// ============================================
 
-// ── SUPABASE (safe accessor — pages must set window.supabase first) ──
-function getSb() {
-  return (typeof window !== 'undefined' && window.supabase) ? window.supabase : null;
-}
+const ArtemisAgent = (function() {
+    'use strict';
 
-// ── CLASSIFIER STATE ─────────────────────────────────────────
-let classifier = null;
-let classifierLoading = false;
-let classifierReady = false;
+    // ============================================
+    // STATE
+    // ============================================
+    let cards = [];                 // Loaded card modules
+    let cardRegistry = [];          // Config definitions
+    let routerConfig = null;
+    let persistenceConfig = null;
+    let supabase = null;
+    let sessionId = null;
+    let isInitialized = false;
+    let decisionCount = 0;
 
-// ── TOOL CARDS ───────────────────────────────────────────────
-const TOOL_CARDS = [
-  {
-    name: 'GaiaDB_recall',
-    icon: '🗄️',
-    description: 'Search conversation history across all Olympians',
-    matchPattern: 'The user wants to search, recall, find, or look up past conversations, memories, things they discussed, or information from their chat history.',
-    requiresDb: true,
-    execute: async (input, context) => {
-      const sb = getSb();
-      if (!sb) return { error: 'Database not connected. Supabase client not initialized.' };
-      
-      const keyword = extractKeyword(input);
-      if (!keyword) return { error: 'No search keyword found.' };
-      
-      const { data, error } = await sb
-        .from('conversations')
-        .select('role, content, olympian, created_at')
-        .eq('session_id', context.sessionId)
-        .ilike('content', `%${keyword}%`)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      
-      if (error) return { error: error.message };
-      if (!data || data.length === 0) return { text: `No memories found for "${keyword}".` };
-      
-      const lines = data.map(m => 
-        `[${m.olympian}] ${m.role}: ${m.content.slice(0, 120)}${m.content.length > 120 ? '...' : ''}`
-      );
-      return { 
-        text: `Found ${data.length} memories matching "${keyword}":\n${lines.join('\n')}`,
-        data,
-        keyword
-      };
-    }
-  },
-  {
-    name: 'Pollinations-Text',
-    icon: '💬',
-    description: 'Generate text via Pollinations AI',
-    matchPattern: 'The user wants text generation, analysis, explanation, conversation, summary, or to ask a question that requires an AI response.',
-    requiresDb: false,
-    execute: async (input, context) => {
-      try {
-        const handshake = context.handshake || '';
-        const response = await fetch('https://text.pollinations.ai/openai', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: [
-              { 
-                role: 'system', 
-                content: `You are ARTEMIS, Olympian VIII of the Ealdforn pantheon. Goddess of the Hunt, Tracking, Wild Data, and Personal AI.
-
-You are a personal AI agent with tool access. You respond in a chat interface.
-- Be concise. 2-4 sentences unless asked for detail.
-- You are helpful but not chatty. You track, retrieve, and report.
-- Never output character counts, token counts, or analyze your own response length.
-- You have access to: conversation memory (GaiaDB), image generation, repo search, and memory compression.
-- Current context: ${handshake}`
-              },
-              { role: 'user', content: input }
-            ],
-            model: 'openai',
-            temperature: 0.5,
-            max_tokens: 200,
-          }),
-        });
-        
-        const data = await response.json();
-        let text = data.choices?.[0]?.message?.content?.trim() || 'No response generated.';
-        
-        // Sanity check: if response is a character count loop, discard it
-        if (text.includes('->') && (text.includes('space') || text.includes('characters'))) {
-          text = 'I tracked what you asked. The hunt is complete. What else shall I find?';
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    async function init(options = {}) {
+        if (isInitialized) {
+            console.log('[Artemis] Already initialized.');
+            return true;
         }
-        
-        return { text };
-      } catch (e) {
-        return { error: e.message };
-      }
-    }
-  },
-  {
-    name: 'Pollinations-Image',
-    icon: '🖼️',
-    description: 'Generate an image via Pollinations',
-    matchPattern: 'The user wants to generate, create, show, make, or display an image, picture, visual, or artwork.',
-    requiresDb: false,
-    execute: async (input, context) => {
-      const imgPrompt = input
-        .replace(/generate|show me|create an image of|image of|make an image|display/gi, '')
-        .trim()
-        .replace(/^["']|["']$/g, '');
-      
-      if (!imgPrompt || imgPrompt.length < 3) {
-        return { error: 'No image description found. Try: "generate a forest at night"' };
-      }
-      
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(imgPrompt)}?width=768&height=768&model=flux&nologo=true`;
-      return { 
-        text: `Image generated: "${imgPrompt}"`,
-        imageUrl: url, 
-        prompt: imgPrompt 
-      };
-    }
-  },
-  {
-    name: 'Browser-Hunt',
-    icon: '🔍',
-    description: 'Search across kairos-coder GitHub repositories',
-    matchPattern: 'The user wants to search, find, hunt for, or locate code, files, patterns, or information across their repositories, projects, or the pantheon.',
-    requiresDb: false,
-    execute: async (input, context) => {
-      const pattern = extractPattern(input);
-      if (!pattern) return { error: 'No search pattern found.' };
-      
-      const repos = [
-        'apollo', 'athena', 'hermes', 'gaia', 'ealdenmot', 
-        'ealdforn-studios', 'artemis', 'zeus', 'poseidon', 'demeter'
-      ];
-      
-      const results = [];
-      for (const repo of repos) {
+
+        console.log('[Artemis] Initializing EaldfornAI Router...');
+
         try {
-          const url = `https://raw.githubusercontent.com/kairos-coder/${repo}/main/README.md`;
-          const res = await fetch(url);
-          if (res.ok) {
-            const text = await res.text();
-            if (text.toLowerCase().includes(pattern.toLowerCase())) {
-              results.push(repo);
+            // 1. Load config
+            await loadConfig();
+
+            // 2. Load all card modules
+            await loadAllCards();
+
+            // 3. Set up Supabase if available
+            if (options.supabaseUrl && options.supabaseKey) {
+                await setupSupabase(options.supabaseUrl, options.supabaseKey);
             }
-          }
-        } catch (e) {
-          // Repo doesn't exist or no README — skip
+
+            // 4. Get or create session
+            sessionId = await getOrCreateSession();
+
+            // 5. Load learned weights from localStorage
+            loadLearnedWeights();
+
+            // 6. Initialize ML classifier if configured
+            if (routerConfig.classifierMode === 'hybrid' || routerConfig.classifierMode === 'ml') {
+                await initMLClassifier();
+            }
+
+            isInitialized = true;
+            console.log('[Artemis] Initialized. Deck:', cards.length, 'cards. Session:', sessionId);
+            return true;
+
+        } catch (err) {
+            console.error('[Artemis] Init failed:', err);
+            return false;
         }
-      }
-      
-      if (results.length === 0) {
-        return { text: `Pattern "${pattern}" not found in any repository READMEs.` };
-      }
-      
-      return {
-        text: `Found "${pattern}" in ${results.length} repos: ${results.join(', ')}`,
-        pattern,
-        matches: results
-      };
     }
-  },
-  {
-    name: 'COMPRESS',
-    icon: '📦',
-    description: 'Compress recent memory into a dense snapshot',
-    matchPattern: 'The user wants to compress, save, snapshot, summarize, or condense their memory, context, or recent activity.',
-    requiresDb: true,
-    execute: async (input, context) => {
-      try {
-        const sb = getSb();
-        const recentActions = context.recentActions || [];
-        
-        let topics = '';
-        if (sb && context.sessionId) {
-          const result = await sb
-            .from('conversations')
-            .select('content, olympian')
-            .eq('session_id', context.sessionId)
-            .order('created_at', { ascending: false })
-            .limit(8);
-          
-          topics = (result.data || [])
-            .map(c => `${c.olympian}:${(c.content || '').slice(0, 30)}`)
-            .join('|');
+
+    // ============================================
+    // CONFIG LOADING
+    // ============================================
+    async function loadConfig() {
+        // Check if config is already in global scope
+        if (typeof ARTEMIS_CARD_DECK !== 'undefined') {
+            cardRegistry = ARTEMIS_CARD_DECK;
         }
+        if (typeof ROUTER_CONFIG !== 'undefined') {
+            routerConfig = ROUTER_CONFIG;
+        }
+        if (typeof PERSISTENCE_CONFIG !== 'undefined') {
+            persistenceConfig = PERSISTENCE_CONFIG;
+        }
+
+        // If not found, try to load dynamically
+        if (cardRegistry.length === 0) {
+            try {
+                const response = await fetch('cards/config.js');
+                const text = await response.text();
+                // Extract the arrays using Function constructor
+                // (config.js defines them as const — we eval safely)
+                const configFn = new Function(text + '; return { ARTEMIS_CARD_DECK, ROUTER_CONFIG, PERSISTENCE_CONFIG, CARD_CATEGORIES };');
+                const config = configFn();
+                cardRegistry = config.ARTEMIS_CARD_DECK || [];
+                routerConfig = config.ROUTER_CONFIG || {};
+                persistenceConfig = config.PERSISTENCE_CONFIG || {};
+            } catch (err) {
+                console.warn('[Artemis] Could not load config.js dynamically:', err.message);
+                // Use defaults
+                cardRegistry = [];
+                routerConfig = { confidenceThreshold: 0.35, maxCardsPerTurn: 3, executionOrder: ['meta', 'memory', 'retrieval', 'generation'] };
+                persistenceConfig = { localKeys: { compressedMemory: 'artemis_compressed_memory', recentActions: 'artemis_recent_actions' } };
+            }
+        }
+    }
+
+    // ============================================
+    // CARD LOADING
+    // ============================================
+    async function loadAllCards() {
+        const cardFiles = cardRegistry.map(c => c.cardFile).filter(Boolean);
         
-        // Try Pollinations for smart compression
-        let compressed = '';
-        try {
-          const response = await fetch('https://text.pollinations.ai/openai', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messages: [
-                { 
-                  role: 'system', 
-                  content: 'Output ONLY a pipe-delimited list of 5-8 keywords under 120 characters. No sentences. No counting. No explanations. Just: keyword1|keyword2|keyword3' 
-                },
-                { 
-                  role: 'user', 
-                  content: `Topics: ${topics || 'none'}. Actions: ${recentActions.slice(-3).join('|')}` 
+        for (const cardFile of cardFiles) {
+            try {
+                const cardModule = await loadCardModule(cardFile);
+                if (cardModule) {
+                    cards.push(cardModule);
+                    // Link the execute function in the registry
+                    const registryCard = cardRegistry.find(c => c.cardFile === cardFile);
+                    if (registryCard) {
+                        registryCard.execute = cardModule.run.bind(cardModule);
+                    }
+                    console.log('[Artemis] Loaded card:', cardModule.id);
                 }
-              ],
-              model: 'openai',
-              temperature: 0.2,
-              max_tokens: 25,
-            }),
-          });
-          
-          const data = await response.json();
-          compressed = data.choices?.[0]?.message?.content?.trim() || '';
-          
-          // Sanity check: discard if it's a character count or too long
-          if (compressed.length > 150 || 
-              (compressed.includes('->') && compressed.includes('space')) ||
-              compressed.includes('Let\'s count')) {
-            compressed = '';
-          }
-        } catch (e) {
-          // Pollinations failed, use local fallback
+            } catch (err) {
+                console.warn('[Artemis] Failed to load card', cardFile, ':', err.message);
+            }
         }
-        
-        // Local fallback compression
-        if (!compressed) {
-          const words = (topics + ' ' + recentActions.slice(-3).join(' '))
-            .toLowerCase()
-            .replace(/[^a-z0-9\s]/g, ' ')
-            .split(/\s+/)
-            .filter(w => w.length > 3)
-            .slice(0, 10);
-          compressed = [...new Set(words)].join('|').slice(0, 120);
+    }
+
+    async function loadCardModule(cardFile) {
+        try {
+            const response = await fetch(`cards/${cardFile}`);
+            const text = await response.text();
+            // Extract the object using Function constructor
+            const moduleFn = new Function(text + '; return ' + cardFile.replace('.js', '') + ';');
+            const module = moduleFn();
+            return module;
+        } catch (err) {
+            // Try alternative: if card is already in global scope
+            const globalName = cardFile.replace('.js', '');
+            if (typeof window[globalName] !== 'undefined') {
+                return window[globalName];
+            }
+            throw err;
         }
+    }
+
+    // ============================================
+    // SUPABASE SETUP
+    // ============================================
+    async function setupSupabase(url, key) {
+        try {
+            // Check if supabase client is available
+            if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+                supabase = window.supabase.createClient(url, key);
+                console.log('[Artemis] Supabase connected.');
+            } else {
+                console.warn('[Artemis] Supabase client not found. Running without persistence.');
+            }
+        } catch (err) {
+            console.warn('[Artemis] Supabase setup failed:', err.message);
+        }
+    }
+
+    async function getOrCreateSession() {
+        // Try localStorage first
+        const storedSession = localStorage.getItem('artemis_session_id');
+        if (storedSession) {
+            return storedSession;
+        }
+
+        // Generate new session
+        const newSession = 'artemis_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+        localStorage.setItem('artemis_session_id', newSession);
+        return newSession;
+    }
+
+    // ============================================
+    // WEIGHT MANAGEMENT
+    // ============================================
+    function loadLearnedWeights() {
+        try {
+            const weightsKey = persistenceConfig?.localKeys?.cardWeights || 'artemis_card_weights';
+            const stored = localStorage.getItem(weightsKey);
+            if (stored) {
+                const learnedWeights = JSON.parse(stored);
+                // Apply learned weights to registry
+                for (const card of cardRegistry) {
+                    if (learnedWeights[card.id]) {
+                        card.defaultWeight = learnedWeights[card.id].weight;
+                        card.playCount = learnedWeights[card.id].plays || 0;
+                        card.successCount = learnedWeights[card.id].successes || 0;
+                    }
+                }
+                console.log('[Artemis] Loaded learned weights for', Object.keys(learnedWeights).length, 'cards');
+            }
+        } catch (err) {
+            console.warn('[Artemis] Weight load failed:', err.message);
+        }
+    }
+
+    // ============================================
+    // ML CLASSIFIER (Lazy init)
+    // ============================================
+    let mlPipeline = null;
+    let mlReady = false;
+
+    async function initMLClassifier() {
+        try {
+            // Check if Transformers.js is available
+            if (typeof transformers === 'undefined') {
+                console.log('[Artemis] Transformers.js not loaded. Using heuristic only.');
+                routerConfig.classifierMode = 'heuristic';
+                return;
+            }
+
+            const { pipeline } = transformers;
+            mlPipeline = await pipeline(
+                routerConfig.mlModel.task,
+                routerConfig.mlModel.model
+            );
+            mlReady = true;
+            console.log('[Artemis] ML classifier ready.');
+        } catch (err) {
+            console.warn('[Artemis] ML classifier init failed, falling back to heuristic:', err.message);
+            routerConfig.classifierMode = 'heuristic';
+        }
+    }
+
+    // ============================================
+    // CORE: ROUTE & EXECUTE
+    // ============================================
+    /**
+     * Main entry point. Called by chat.html or terminal.html.
+     * @param {string} userInput - The raw user message
+     * @param {Object} options - { systemPrompt, conversationHistory }
+     * @returns {Object} { text, imageUrl, metadata }
+     */
+    async function processInput(userInput, options = {}) {
+        if (!isInitialized) {
+            await init();
+        }
+
+        decisionCount++;
+        console.log(`[Artemis] Decision #${decisionCount} — Input: "${userInput.substring(0, 80)}..."`);
+
+        // === PHASE 1: CLASSIFY ===
+        const classification = await classifyInput(userInput);
+        const votedCards = classification.votedCards;
+
+        console.log('[Artemis] Cards voted:', votedCards.map(c => `${c.id}(${c.score.toFixed(2)})`).join(', '));
+
+        // === PHASE 2: SELECT ===
+        const selectedCards = selectCards(votedCards);
         
-        localStorage.setItem('artemis_compressed_memory', compressed);
-        
-        return {
-          text: `Memory compressed: "${compressed}"`,
-          snapshot: compressed
+        // === PHASE 3: SEQUENCE ===
+        const sequencedCards = sequenceCards(selectedCards);
+
+        console.log('[Artemis] Execution order:', sequencedCards.map(c => c.id).join(' → '));
+
+        // === PHASE 4: EXECUTE ===
+        const context = {
+            input: userInput,
+            sessionId: sessionId,
+            supabase: supabase,
+            systemPrompt: options.systemPrompt || getDefaultSystemPrompt(),
+            conversationHistory: options.conversationHistory || [],
+            memoryContext: null,
+            votedCards: votedCards,
+            executedCards: sequencedCards,
+            outputs: {}
         };
-      } catch (e) {
-        const snapshot = (context.recentActions || []).slice(-3).join('|').slice(0, 120);
-        try { localStorage.setItem('artemis_compressed_memory', snapshot); } catch (e2) {}
-        return { text: 'Memory compressed locally.', snapshot };
-      }
+
+        const results = await executeCards(sequencedCards, context);
+        context.outputs = results;
+
+        // === PHASE 5: COMBINE OUTPUTS ===
+        const combined = combineOutputs(results, userInput);
+
+        // === PHASE 6: LOG DECISION ===
+        await logDecision(context);
+
+        // === PHASE 7: TRIGGER AUTO CARDS ===
+        await runAutoCards(context);
+
+        // Save recent actions to localStorage
+        saveRecentAction(userInput, combined);
+
+        return {
+            text: combined.text,
+            imageUrl: combined.imageUrl || null,
+            metadata: {
+                cardsPlayed: sequencedCards.map(c => c.id),
+                voteScores: Object.fromEntries(votedCards.map(c => [c.id, c.score])),
+                decisionNumber: decisionCount,
+                sessionId: sessionId
+            }
+        };
     }
-  }
-];
 
-// ── KEYWORD EXTRACTORS ───────────────────────────────────────
-function extractKeyword(input) {
-  let cleaned = input
-    .replace(/find|search|recall|remember|look up|show me|get|retrieve/gi, '')
-    .replace(/my |the |about |from |in |for /gi, '')
-    .replace(/conversations|memories|messages|chats|history/gi, '')
-    .replace(/yesterday|today|last week|earlier/gi, '')
-    .trim();
-  
-  if (!cleaned || cleaned.length < 2) {
-    cleaned = input.trim();
-  }
-  
-  const words = cleaned.split(/\s+/).filter(w => w.length > 2);
-  return words.slice(0, 3).join(' ');
-}
+    // ============================================
+    // CLASSIFIER
+    // ============================================
+    async function classifyInput(input) {
+        const inputLower = input.toLowerCase();
+        const votedCards = [];
 
-function extractPattern(input) {
-  let cleaned = input
-    .replace(/hunt|search|find|look for|track|locate/gi, '')
-    .replace(/for |in |across |the |my /gi, '')
-    .replace(/repos|repositories|code|files/gi, '')
-    .trim();
-  
-  if (!cleaned || cleaned.length < 2) {
-    cleaned = input.trim();
-  }
-  
-  const words = cleaned.split(/\s+/).filter(w => w.length > 2);
-  return words.slice(0, 3).join(' ');
-}
+        for (const card of cardRegistry) {
+            // Skip auto-trigger cards in classification
+            if (card.autoTrigger) continue;
 
-// ── CLASSIFIER ────────────────────────────────────────────────
-async function loadClassifier() {
-  if (classifierReady) return classifier;
-  if (classifierLoading) {
-    while (classifierLoading) {
-      await new Promise(r => setTimeout(r, 100));
+            let score = 0;
+
+            // Heuristic: pattern matching
+            if (card.matchPatterns && card.matchPatterns.length > 0) {
+                const matchCount = card.matchPatterns.filter(pattern => 
+                    inputLower.includes(pattern.toLowerCase())
+                ).length;
+                
+                if (matchCount > 0) {
+                    // Score based on matches relative to total patterns
+                    score = (matchCount / card.matchPatterns.length) * card.defaultWeight;
+                    // Bonus for exact matches
+                    score = Math.min(score * 1.2, 1.0);
+                }
+            }
+
+            // If ML is available, blend scores
+            if (mlReady && routerConfig.classifierMode === 'hybrid' && card.matchPatterns) {
+                try {
+                    const mlResult = await mlPipeline(input, card.matchPatterns);
+                    if (mlResult && mlResult.scores) {
+                        const topScore = Math.max(...mlResult.scores);
+                        // Blend: 60% heuristic, 40% ML
+                        score = score * 0.6 + topScore * 0.4;
+                    }
+                } catch (err) {
+                    // ML failed — stick with heuristic score
+                }
+            }
+
+            // Apply learned weight modifier
+            const learnedModifier = getLearnedModifier(card.id);
+            score *= learnedModifier;
+
+            if (score >= (routerConfig.confidenceThreshold || 0.35)) {
+                votedCards.push({
+                    id: card.id,
+                    name: card.name,
+                    icon: card.icon,
+                    category: card.category,
+                    score: score,
+                    card: card
+                });
+            }
+        }
+
+        // Sort by score descending
+        votedCards.sort((a, b) => b.score - a.score);
+
+        return { votedCards };
     }
-    return classifier;
-  }
-  
-  classifierLoading = true;
-  
-  try {
-    const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');
-    
-    // Force Transformers.js to use Hugging Face CDN, not local domain
-    env.localModelPath = null;
-    env.allowRemoteModels = true;
-    env.useBrowserCache = true;
-    env.remoteHost = 'https://huggingface.co';
-    env.remotePathTemplate = '{model}/resolve/{revision}/';
-    
-    classifier = await pipeline(
-      'text-classification',
-      'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
-      { 
-        quantized: true,
-        cache_dir: null,
-        local_files_only: false
-      }
-    );
-    
-    classifierReady = true;
-    return classifier;
-  } catch (e) {
-    console.warn('Classifier failed to load, using heuristic fallback:', e.message);
-    classifier = null;
-    classifierReady = true;
-    return null;
-  } finally {
-    classifierLoading = false;
-  }
-}
 
-async function classifyIntent(matchPattern, userInput) {
-  const model = await loadClassifier();
-  
-  if (!model) {
-    return heuristicClassify(matchPattern, userInput);
-  }
-  
-  try {
-    const prompt = `${matchPattern}: "${userInput}"`;
-    const result = await model(prompt);
-    
-    if (result[0].label === 'POSITIVE' && result[0].score > 0.6) {
-      return { match: true, score: result[0].score };
+    function getLearnedModifier(cardId) {
+        try {
+            const weightsKey = persistenceConfig?.localKeys?.cardWeights || 'artemis_card_weights';
+            const stored = localStorage.getItem(weightsKey);
+            if (!stored) return 1.0;
+            
+            const weights = JSON.parse(stored);
+            if (!weights[cardId]) return 1.0;
+            
+            const w = weights[cardId];
+            if (w.plays < 5) return 1.0; // Warmup period
+            
+            // Success rate modifier
+            const successRate = w.successes / Math.max(w.plays, 1);
+            // Range: 0.7 to 1.3 (cards that succeed more get voted higher)
+            return 0.7 + (successRate * 0.6);
+        } catch {
+            return 1.0;
+        }
     }
-    return { match: false, score: result[0].score };
-  } catch (e) {
-    console.warn('Classification error, using heuristic:', e.message);
-    return heuristicClassify(matchPattern, userInput);
-  }
-}
 
-function heuristicClassify(matchPattern, userInput) {
-  const lower = userInput.toLowerCase();
-  
-  const keywords = {
-    'GaiaDB_recall': ['find', 'search', 'recall', 'remember', 'memory', 'memories', 'look up', 'history', 'past', 'discussed', 'conversation', 'what did', 'when did', 'tracking'],
-    'Pollinations-Text': ['explain', 'analyze', 'what', 'how', 'why', 'tell me', 'describe', 'summarize', 'think', 'who', 'where', 'can you', 'help'],
-    'Pollinations-Image': ['generate', 'image', 'picture', 'show me', 'create', 'visual', 'art', 'draw', 'photo', 'paint', 'render'],
-    'Browser-Hunt': ['hunt', 'repo', 'code', 'search for', 'find in', 'across', 'repositories', 'github', 'file', 'project'],
-    'COMPRESS': ['compress', 'snapshot', 'save memory', 'summarize', 'condense', 'compact', 'save this', 'remember this']
-  };
-  
-  for (const [cardName, words] of Object.entries(keywords)) {
-    if (matchPattern.toLowerCase().includes(cardName.toLowerCase()) || 
-        matchPattern.toLowerCase().includes(cardName.replace('_', ' ').toLowerCase())) {
-      const matchCount = words.filter(w => lower.includes(w)).length;
-      if (matchCount >= 2) {
-        return { match: true, score: 0.7 + (matchCount * 0.05) };
-      }
-      if (matchCount === 1 && lower.split(' ').length < 6) {
-        return { match: true, score: 0.65 };
-      }
+    // ============================================
+    // CARD SELECTION & SEQUENCING
+    // ============================================
+    function selectCards(votedCards) {
+        const maxCards = routerConfig.maxCardsPerTurn || 3;
+        let selected = votedCards.slice(0, maxCards);
+
+        // Ensure at least one card if nothing voted (fallback to text generation)
+        if (selected.length === 0) {
+            const fallback = cardRegistry.find(c => c.id === 'pollinations_text');
+            if (fallback) {
+                selected = [{
+                    id: fallback.id,
+                    name: fallback.name,
+                    icon: fallback.icon,
+                    category: fallback.category,
+                    score: 0.3,
+                    card: fallback
+                }];
+            }
+        }
+
+        return selected;
     }
-  }
-  
-  return { match: false, score: 0.3 };
-}
 
-// ── HANDSHAKE PROTOCOL ────────────────────────────────────────
-function buildHandshake() {
-  const sessionToken = (typeof localStorage !== 'undefined') 
-    ? localStorage.getItem('apollo_session_token') || 'none' 
-    : 'none';
-  const compressedMemory = (typeof localStorage !== 'undefined')
-    ? localStorage.getItem('artemis_compressed_memory') || ''
-    : '';
-  const recentActions = (typeof localStorage !== 'undefined')
-    ? JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]')
-    : [];
-  
-  return [
-    `ARTEMIS//SESSION:${sessionToken}`,
-    `ARTEMIS//MEMORY:${compressedMemory}`,
-    `ARTEMIS//ACTIONS:${recentActions.slice(-5).join('|')}`,
-    `ARTEMIS//TIME:${new Date().toISOString()}`,
-  ].join('\n');
-}
-
-function addAction(action) {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    const actions = JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]');
-    actions.push(`${new Date().toISOString().slice(11, 19)} ${action}`);
-    if (actions.length > 30) actions.splice(0, actions.length - 25);
-    localStorage.setItem('artemis_recent_actions', JSON.stringify(actions));
-  } catch (e) {}
-}
-
-// ── SESSION HELPER ───────────────────────────────────────────
-async function getSessionId() {
-  if (typeof localStorage === 'undefined') return null;
-  const sb = getSb();
-  if (!sb) return null;
-  
-  const token = localStorage.getItem('apollo_session_token');
-  if (!token) return null;
-  
-  try {
-    const { data } = await sb.from('sessions').select('id').eq('session_token', token).single();
-    return data?.id || null;
-  } catch (e) {
-    return null;
-  }
-}
-
-// ── MAIN PROCESS FUNCTION ────────────────────────────────────
-async function processInput(userInput, options = {}) {
-  const { 
-    verbose = false,
-    autoCompress = false,
-    sessionId = null
-  } = options;
-  
-  const handshake = buildHandshake();
-  const context = {
-    handshake,
-    sessionId,
-    sessionToken: (typeof localStorage !== 'undefined') 
-      ? localStorage.getItem('apollo_session_token') 
-      : null,
-    recentActions: (typeof localStorage !== 'undefined')
-      ? JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]')
-      : [],
-    dbConnected: !!sessionId && !!getSb()
-  };
-  
-  const results = [];
-  const cardVotes = [];
-  
-  // Phase 1: Classify each card
-  for (const card of TOOL_CARDS) {
-    if (card.requiresDb && !context.sessionId) {
-      cardVotes.push({ card: card.name, match: false, score: 0, reason: 'no session' });
-      continue;
-    }
-    
-    const vote = await classifyIntent(card.matchPattern, userInput);
-    cardVotes.push({ card: card.name, match: vote.match, score: vote.score });
-    
-    if (vote.match) {
-      try {
-        const output = await card.execute(userInput, context);
-        results.push({
-          card: card.name,
-          icon: card.icon,
-          output
+    function sequenceCards(selectedCards) {
+        const orderPriority = routerConfig.executionOrder || ['meta', 'memory', 'retrieval', 'generation'];
+        
+        return selectedCards.sort((a, b) => {
+            const priorityA = orderPriority.indexOf(a.category);
+            const priorityB = orderPriority.indexOf(b.category);
+            
+            // Categories not in the list go last
+            const pa = priorityA >= 0 ? priorityA : 999;
+            const pb = priorityB >= 0 ? priorityB : 999;
+            
+            return pa - pb;
         });
-      } catch (e) {
-        results.push({
-          card: card.name,
-          icon: card.icon,
-          output: { error: e.message }
-        });
-      }
     }
-  }
-  
-  // Auto-compress if requested and no COMPRESS card matched
-  if (autoCompress && !results.find(r => r.card === 'COMPRESS')) {
-    const compressCard = TOOL_CARDS.find(c => c.name === 'COMPRESS');
-    try {
-      const output = await compressCard.execute('auto-compress', context);
-      results.push({ card: 'COMPRESS', icon: '📦', output });
-    } catch (e) {
-      // Silent fail for auto-compress
-    }
-  }
-  
-  // Log action
-  const matchedCards = results.map(r => r.card).join(', ') || 'none';
-  addAction(`Processed: "${userInput.slice(0, 60)}" → ${matchedCards}`);
-  
-  // Build response text
-  let responseText = '';
-  if (results.length === 0) {
-    responseText = 'No tools matched your request. Try rephrasing or use MANUAL mode for direct commands.';
-  } else if (results.length === 1) {
-    responseText = results[0].output.text || results[0].output.error || 'Task completed.';
-  } else {
-    const texts = results
-      .filter(r => r.output.text)
-      .map(r => `[${r.card}] ${r.output.text}`);
-    responseText = texts.join('\n\n');
-  }
-  
-  return {
-    text: responseText,
-    results,
-    cardVotes,
-    handshake,
-    timestamp: new Date().toISOString()
-  };
-}
 
-// ── EXPORT ────────────────────────────────────────────────────
-if (typeof window !== 'undefined') {
-  window.ArtemisAgent = {
-    process: processInput,
-    loadClassifier,
-    buildHandshake,
-    addAction,
-    TOOL_CARDS,
-    classifyIntent,
-    tools: {
-      trackMemory: async (query) => {
-        const card = TOOL_CARDS.find(c => c.name === 'GaiaDB_recall');
-        const sessionId = await getSessionId();
-        return card.execute(query, { sessionId, handshake: buildHandshake() });
-      },
-      hunt: async (pattern) => {
-        const card = TOOL_CARDS.find(c => c.name === 'Browser-Hunt');
-        return card.execute(pattern, { handshake: buildHandshake() });
-      },
-      compress: async () => {
-        const card = TOOL_CARDS.find(c => c.name === 'COMPRESS');
-        const sessionId = await getSessionId();
-        return card.execute('compress', { 
-          sessionId, 
-          handshake: buildHandshake(),
-          recentActions: (typeof localStorage !== 'undefined')
-            ? JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]')
-            : []
-        });
-      }
+    // ============================================
+    // EXECUTION
+    // ============================================
+    async function executeCards(sequencedCards, context) {
+        const outputs = {};
+
+        for (const cardItem of sequencedCards) {
+            const card = cardItem.card;
+            
+            if (!card.execute) {
+                console.warn('[Artemis] No execute function for card:', card.id);
+                continue;
+            }
+
+            console.log('[Artemis] Executing card:', card.id);
+
+            try {
+                const timeout = card.timeout || 10000;
+                const result = await withTimeout(
+                    card.execute(context),
+                    timeout,
+                    `Card ${card.id} timed out`
+                );
+
+                if (result && result.success) {
+                    // Merge card output data into context.outputs
+                    if (result.data) {
+                        Object.assign(outputs, result.data);
+                        
+                        // Also update context for downstream cards
+                        if (result.data.memory_context) {
+                            context.memoryContext = result.data.memory_context;
+                        }
+                        if (result.data.text_output) {
+                            context.textOutput = result.data.text_output;
+                        }
+                    }
+                } else {
+                    console.warn('[Artemis] Card', card.id, 'returned failure:', result?.error);
+                }
+            } catch (err) {
+                console.warn('[Artemis] Card', card.id, 'threw error:', err.message);
+            }
+        }
+
+        return outputs;
     }
-  };
+
+    function withTimeout(promise, ms, errorMessage) {
+        return Promise.race([
+            promise,
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error(errorMessage)), ms)
+            )
+        ]);
+    }
+
+    // ============================================
+    // OUTPUT COMBINATION
+    // ============================================
+    function combineOutputs(outputs, userInput) {
+        let text = '';
+        let imageUrl = null;
+
+        // Memory context comes first
+        if (outputs.memory_context) {
+            text += `*From memory:*\n${outputs.memory_context}\n\n`;
+        }
+
+        // Web context
+        if (outputs.web_context) {
+            text += `*From the web:*\n${outputs.web_context}\n\n`;
+        }
+
+        // Generated text (the main response)
+        if (outputs.text_output) {
+            text += outputs.text_output;
+        }
+
+        // Compressed memory (appended as note)
+        if (outputs.compressed_memory) {
+            text += `\n\n> *${outputs.compressed_memory}*`;
+        }
+
+        // Image URL
+        if (outputs.image_url) {
+            imageUrl = outputs.image_url;
+            if (!text) {
+                text = `Here's the image you requested:`;
+            }
+        }
+
+        // Fallback if nothing produced
+        if (!text && !imageUrl) {
+            text = 'I received your message, but none of my cards produced output. Try rephrasing?';
+        }
+
+        return { text: text.trim(), imageUrl };
+    }
+
+    // ============================================
+    // DECISION LOGGING
+    // ============================================
+    async function logDecision(context) {
+        // The decisionLog card handles this if loaded
+        const decisionCard = cards.find(c => c.id === 'decision_log');
+        if (decisionCard && decisionCard.run) {
+            try {
+                await decisionCard.run({
+                    input: context.input,
+                    votedCards: context.votedCards,
+                    executedCards: context.executedCards,
+                    outputs: context.outputs,
+                    sessionId: context.sessionId,
+                    supabase: supabase
+                });
+            } catch (err) {
+                console.warn('[Artemis] Decision logging failed:', err.message);
+            }
+        }
+    }
+
+    async function runAutoCards(context) {
+        const autoCards = cardRegistry.filter(c => c.autoTrigger);
+        for (const card of autoCards) {
+            const loadedCard = cards.find(c => c.id === card.id);
+            if (loadedCard && loadedCard.run) {
+                try {
+                    await loadedCard.run(context);
+                } catch (err) {
+                    console.warn('[Artemis] Auto card', card.id, 'failed:', err.message);
+                }
+            }
+        }
+    }
+
+    // ============================================
+    // PERSISTENCE HELPERS
+    // ============================================
+    function saveRecentAction(input, output) {
+        try {
+            const key = persistenceConfig?.localKeys?.recentActions || 'artemis_recent_actions';
+            const existing = JSON.parse(localStorage.getItem(key) || '[]');
+            existing.push({
+                input: input.substring(0, 200),
+                output: output.text?.substring(0, 200) || '',
+                timestamp: new Date().toISOString()
+            });
+            // Keep last 50
+            if (existing.length > 50) {
+                existing.splice(0, existing.length - 50);
+            }
+            localStorage.setItem(key, JSON.stringify(existing));
+        } catch (err) {
+            // Non-critical
+        }
+    }
+
+    function getDefaultSystemPrompt() {
+        return `You are Artemis, Goddess of the Hunt, an AI agent of Ealdforn Studios. 
+You speak with precision and clarity. You execute cards from your deck to serve the human operator.
+You are direct, capable, and mythic in tone — but never verbose.
+Respond in 1-3 sentences unless the task demands more detail.`;
+    }
+
+    // ============================================
+    // PUBLIC API
+    // ============================================
+    function getStatus() {
+        return {
+            initialized: isInitialized,
+            cardsLoaded: cards.length,
+            cardsAvailable: cardRegistry.map(c => ({ id: c.id, name: c.name, icon: c.icon })),
+            decisionCount: decisionCount,
+            sessionId: sessionId,
+            classifierMode: routerConfig?.classifierMode || 'heuristic',
+            mlReady: mlReady
+        };
+    }
+
+    function getCardRegistry() {
+        return cardRegistry.map(c => ({
+            id: c.id,
+            name: c.name,
+            icon: c.icon,
+            category: c.category,
+            description: c.description,
+            weight: c.defaultWeight,
+            playCount: c.playCount || 0,
+            successCount: c.successCount || 0
+        }));
+    }
+
+    return {
+        init,
+        processInput,
+        getStatus,
+        getCardRegistry
+    };
+
+})();
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ArtemisAgent;
 }

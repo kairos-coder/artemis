@@ -51,16 +51,15 @@
       padding-bottom: 1rem;
     }
 
-    .output-line {
-      margin-bottom: 0.15rem;
-    }
-
+    .output-line { margin-bottom: 0.15rem; }
     .line-header  { color: var(--accent); }
     .line-success { color: var(--bright); }
     .line-warn    { color: var(--warn); }
     .line-error   { color: var(--error); }
     .line-dim     { color: var(--dim); }
     .line-result  { color: var(--text); }
+    .line-vote-yes { color: var(--bright); }
+    .line-vote-no  { color: var(--dim); }
 
     .input-line {
       display: flex;
@@ -70,17 +69,8 @@
       padding-top: 0.75rem;
     }
 
-    .prompt {
-      color: var(--accent);
-      white-space: nowrap;
-      font-weight: 600;
-    }
-
-    .mode-indicator {
-      color: var(--dim);
-      font-size: 0.75rem;
-      white-space: nowrap;
-    }
+    .prompt { color: var(--accent); white-space: nowrap; font-weight: 600; }
+    .mode-indicator { color: var(--dim); font-size: 0.75rem; white-space: nowrap; }
 
     #terminalInput {
       flex: 1;
@@ -93,10 +83,7 @@
       caret-color: var(--accent);
     }
 
-    #terminalInput::placeholder {
-      color: var(--dim);
-      opacity: 0.4;
-    }
+    #terminalInput::placeholder { color: var(--dim); opacity: 0.4; }
 
     .status-bar {
       display: flex;
@@ -110,10 +97,7 @@
     .status-left  { display: flex; gap: 1.5rem; }
     .status-right { text-align: right; }
 
-    .blink {
-      animation: blink 1s step-end infinite;
-    }
-
+    .blink { animation: blink 1s step-end infinite; }
     @keyframes blink {
       0%, 100% { opacity: 1; }
       50%      { opacity: 0; }
@@ -130,9 +114,9 @@
   <div class="output" id="output"></div>
   <div class="input-line">
     <span class="prompt">🏹 ARTEMIS</span>
-    <span class="mode-indicator" id="modeLabel">[TRACK]</span>
+    <span class="mode-indicator" id="modeLabel">[AUTO]</span>
     <span class="prompt">></span>
-    <input type="text" id="terminalInput" placeholder="Enter command..." autofocus />
+    <input type="text" id="terminalInput" placeholder="Enter command or natural language..." autofocus />
   </div>
 </div>
 
@@ -140,6 +124,7 @@
   <div class="status-left">
     <span id="dbStatus">DB: checking...</span>
     <span id="sessionStatus">SESSION: --</span>
+    <span id="agentStatus">AGENT: loading...</span>
   </div>
   <div class="status-right">
     <span id="telosStatus">TELOS: idle</span>
@@ -147,31 +132,32 @@
   </div>
 </div>
 
+<script src="agent.js"></script>
 <script>
   // ── SUPABASE CONFIG ───────────────────────────────────────
-  const SUPABASE_URL = 'https://nbdvavzqvxrlxhsbrluz.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_6x1xlieXjs3dWqEETQcxnQ_4L1UO2uR';
+  const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+  const SUPABASE_KEY = 'YOUR_PUBLISHABLE_KEY';
   window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const sb = window.supabase;
 
   // ── STATE ─────────────────────────────────────────────────
   const state = {
-    mode: 'TRACK',       // TRACK | HUNT | QUERY | ACT
+    mode: 'AUTO',  // AUTO | MANUAL | TRACK | HUNT | QUERY | ACT
     sessionToken: null,
     sessionId: null,
-    activeTelos: 'idle',
-    recentActions: [],
     dbConnected: false,
-    kairosConnected: false
+    agentReady: false,
+    classifierLoaded: false
   };
 
   // ── DOM ───────────────────────────────────────────────────
-  const outputEl    = document.getElementById('output');
-  const inputEl     = document.getElementById('terminalInput');
-  const modeLabel   = document.getElementById('modeLabel');
-  const dbStatus    = document.getElementById('dbStatus');
+  const outputEl      = document.getElementById('output');
+  const inputEl       = document.getElementById('terminalInput');
+  const modeLabel     = document.getElementById('modeLabel');
+  const dbStatus      = document.getElementById('dbStatus');
   const sessionStatus = document.getElementById('sessionStatus');
-  const telosStatus = document.getElementById('telosStatus');
+  const agentStatus   = document.getElementById('agentStatus');
+  const telosStatus   = document.getElementById('telosStatus');
 
   // ── OUTPUT HELPERS ────────────────────────────────────────
   function print(text, cls = 'line-result') {
@@ -194,32 +180,14 @@
       return;
     }
     const keys = cols || Object.keys(rows[0]);
-    // Header
-    const header = keys.map(k => k.padEnd(20).slice(0, 20)).join(' │ ');
+    const header = keys.map(k => String(k).padEnd(20).slice(0, 20)).join(' │ ');
     print(`  ${header}`, 'line-header');
     print(`  ${'─'.repeat(header.length)}`, 'line-dim');
-    // Rows
     for (const row of rows) {
       const vals = keys.map(k => String(row[k] || '').padEnd(20).slice(0, 20)).join(' │ ');
       print(`  ${vals}`, 'line-result');
     }
     print(`  ${rows.length} row(s)`, 'line-dim');
-  }
-
-  // ── HANDSHAKE PROTOCOL ────────────────────────────────────
-  function buildHandshake() {
-    return [
-      `ARTEMIS//SESSION:${state.sessionToken || 'none'}`,
-      `ARTEMIS//TELOS:${state.activeTelos}`,
-      `ARTEMIS//MEMORY:[${state.recentActions.slice(-5).join('|')}]`,
-      `ARTEMIS//DB:gaia=${state.dbConnected ? 'connected' : 'offline'}|kairos=${state.kairosConnected ? 'connected' : 'offline'}`,
-      `ARTEMIS//MODE:${state.mode}`,
-    ].join('\n');
-  }
-
-  function addAction(action) {
-    state.recentActions.push(action);
-    if (state.recentActions.length > 20) state.recentActions = state.recentActions.slice(-15);
   }
 
   // ── SESSION ───────────────────────────────────────────────
@@ -259,297 +227,196 @@
     }
   }
 
-  // ── TOOLS ─────────────────────────────────────────────────
-  async function tool_track_memory(query) {
-    if (!state.sessionId) return 'Database not connected. Session required.';
+  // ── AGENT INIT ────────────────────────────────────────────
+  async function initAgent() {
+    agentStatus.textContent = 'AGENT: loading...';
     
-    let result;
-    if (query && query.toLowerCase() !== 'all') {
-      // Search conversations for keyword
-      const { data, error } = await sb.from('conversations')
-        .select('role, content, olympian, created_at')
-        .eq('session_id', state.sessionId)
-        .ilike('content', `%${query}%`)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (error) return `Query error: ${error.message}`;
-      result = data;
-    } else {
-      // Get recent conversations
-      const { data, error } = await sb.from('conversations')
-        .select('role, content, olympian, created_at')
-        .eq('session_id', state.sessionId)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (error) return `Query error: ${error.message}`;
-      result = data;
-    }
-
-    if (!result || result.length === 0) return 'No memories found.';
-
-    printHeader(`TRACK MEMORY: ${query || 'recent'}`);
-    printResult(result, ['olympian', 'role', 'content', 'created_at']);
-    addAction(`TRACK memory "${query || 'recent'}" — ${result.length} rows`);
-    return null; // Already printed
-  }
-
-  async function tool_track_kairos(query) {
-    // Placeholder for KairosDB connection
-    printHeader('TRACK KAIROS');
-    print('  KairosDB tracking not yet configured.', 'line-warn');
-    print('  Target: tokens, pairs, svo_triplets tables', 'line-dim');
-    return null;
-  }
-
-  async function tool_hunt(pattern) {
-    if (!pattern) return 'Usage: HUNT <pattern> — searches across pantheon repos';
-    
-    printHeader(`HUNT: "${pattern}"`);
-    
-    const repos = ['apollo', 'athena', 'hermes', 'gaia', 'ealdenmot', 'ealdforn-studios'];
-    let found = 0;
-    
-    for (const repo of repos) {
-      try {
-        const url = `https://raw.githubusercontent.com/kairos-coder/${repo}/main/README.md`;
-        const res = await fetch(url);
-        if (res.ok) {
-          const text = await res.text();
-          if (text.toLowerCase().includes(pattern.toLowerCase())) {
-            print(`  ✓ ${repo}/README.md`, 'line-success');
-            found++;
-          }
-        }
-      } catch (e) {
-        // Repo not found or no README — skip
-      }
-    }
-    
-    if (found === 0) {
-      print(`  Pattern "${pattern}" not found in any repo READMEs.`, 'line-dim');
-    } else {
-      print(`  Found in ${found} repo(s).`, 'line-success');
-    }
-    
-    addAction(`HUNT "${pattern}" — ${found} matches`);
-    return null;
-  }
-
-  async function tool_query(sql) {
-    if (!sql) return 'Usage: QUERY <SQL statement>';
-    if (!state.dbConnected) return 'Database offline.';
-    
-    // Basic safety: only allow SELECT
-    if (!sql.trim().toUpperCase().startsWith('SELECT')) {
-      return 'Only SELECT queries are permitted in TRACK mode. Switch to ACT mode for writes.';
-    }
-
     try {
-      // Use Supabase REST to execute raw SQL via rpc
-      const { data, error } = await sb.rpc('execute_sql', { query_text: sql });
-      
-      if (error) {
-        // Fallback: try direct table queries for common patterns
-        return `Direct SQL not available. Use TRACK commands for database access.\nError: ${error.message}`;
-      }
-      
-      printHeader('QUERY RESULT');
-      if (data && data.length > 0) {
-        printResult(data, Object.keys(data[0]));
-      } else {
-        print('  Query returned no rows.', 'line-dim');
-      }
-      addAction(`QUERY executed — ${data?.length || 0} rows`);
-      return null;
+      await window.ArtemisAgent.loadClassifier();
+      state.classifierLoaded = true;
+      state.agentReady = true;
+      agentStatus.textContent = 'AGENT: ready (ML)';
     } catch (e) {
-      return `Query failed: ${e.message}`;
+      state.agentReady = true;
+      agentStatus.textContent = 'AGENT: ready (heuristic)';
     }
   }
 
-  async function tool_compress() {
-    printHeader('COMPRESSING MEMORY');
-    
-    const handshake = buildHandshake();
-    const conversations = state.sessionId ? await sb.from('conversations')
-      .select('content')
-      .eq('session_id', state.sessionId)
-      .order('created_at', { ascending: false })
-      .limit(10) : { data: [] };
-    
-    const topics = (conversations.data || [])
-      .map(c => (c.content || '').slice(0, 60))
-      .join(' | ');
-    
-    // Send to Pollinations for compression
-    try {
-      const response = await fetch('https://text.pollinations.ai/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            { role: 'system', content: 'Compress the following conversation topics into a dense, keyword-rich summary no longer than 100 characters. Use pipe delimiters. No sentences.' },
-            { role: 'user', content: `${handshake}\n\nTopics: ${topics}` }
-          ],
-          model: 'openai',
-          temperature: 0.3,
-          max_tokens: 50,
-        }),
-      });
-      
-      const data = await response.json();
-      const compressed = data.choices?.[0]?.message?.content?.trim() || topics.slice(0, 100);
-      
-      print(`  ${compressed}`, 'line-success');
-      print('  Compression complete. Use this snapshot for handshake.', 'line-dim');
-      
-      // Store compressed memory
-      localStorage.setItem('artemis_compressed_memory', compressed);
-      addAction(`COMPRESS — ${compressed.length} chars`);
-      return null;
-    } catch (e) {
-      return `Compression failed: ${e.message}`;
-    }
-  }
-
-  async function tool_help() {
-    printHeader('ARTEMIS COMMANDS');
-    print('  TRACK memory [keyword]  — Query conversation history', 'line-result');
-    print('  TRACK kairos [token]    — Query KairosDB', 'line-result');
-    print('  HUNT <pattern>          — Search across all repos', 'line-result');
-    print('  QUERY <SQL>             — Run SELECT against GaiaDB', 'line-result');
-    print('  COMPRESS                — Generate condensed memory snapshot', 'line-result');
-    print('  MODE <track|hunt|query|act> — Switch operational mode', 'line-result');
-    print('  STATUS                  — Show current state', 'line-result');
-    print('  CLEAR                   — Clear terminal', 'line-result');
-    print('  HELP                    — This output', 'line-result');
-    return null;
-  }
-
-  function tool_status() {
-    printHeader('ARTEMIS STATUS');
-    print(`  Mode:        ${state.mode}`, 'line-result');
-    print(`  Session:     ${state.sessionToken ? 'linked' : 'none'}`, 'line-result');
-    print(`  DB (Gaia):   ${state.dbConnected ? 'connected' : 'offline'}`, 'line-result');
-    print(`  DB (Kairos): ${state.kairosConnected ? 'connected' : 'offline'}`, 'line-result');
-    print(`  Active Telos: ${state.activeTelos}`, 'line-result');
-    print(`  Recent Actions: ${state.recentActions.length}`, 'line-result');
-    print(`  Memory Snapshot: ${localStorage.getItem('artemis_compressed_memory') || 'none'}`, 'line-dim');
-    return null;
-  }
-
-  function tool_mode(mode) {
-    const modes = ['TRACK', 'HUNT', 'QUERY', 'ACT'];
-    const upper = mode?.toUpperCase();
-    if (!modes.includes(upper)) {
-      return `Invalid mode. Options: ${modes.join(' | ')}`;
-    }
-    state.mode = upper;
-    modeLabel.textContent = `[${upper}]`;
-    addAction(`MODE switched to ${upper}`);
-    return `Mode set to ${upper}. ${upper === 'ACT' ? '⚠️  Write operations enabled.' : ''}`;
-  }
-
-  // ── COMMAND ROUTER ────────────────────────────────────────
+  // ── COMMAND EXECUTION ─────────────────────────────────────
   async function executeCommand(input) {
     const raw = input.trim();
     if (!raw) return;
 
-    // Echo the command
     print(`🏹 > ${raw}`, 'line-dim');
-
     const upper = raw.toUpperCase();
 
-    // Parse command
+    // ── BUILT-IN COMMANDS ────────────────────────────────────
     if (upper === 'HELP') {
-      return tool_help();
+      printHeader('ARTEMIS COMMANDS');
+      print('  AUTO mode (default):', 'line-header');
+      print('    Any natural language → Artemis classifies and executes matching tools', 'line-result');
+      print('  MANUAL commands:', 'line-header');
+      print('    TRACK memory [keyword]  — Search conversations', 'line-result');
+      print('    HUNT <pattern>          — Search across repos', 'line-result');
+      print('    COMPRESS                — Generate memory snapshot', 'line-result');
+      print('    STATUS                  — Show current state', 'line-result');
+      print('    MODE <auto|manual>      — Switch mode', 'line-result');
+      print('    CLEAR                   — Clear terminal', 'line-result');
+      print('    CARDS                   — List all tool cards', 'line-result');
+      print('    HELP                    — This output', 'line-result');
+      return;
     }
+
     if (upper === 'STATUS') {
-      return tool_status();
+      printHeader('ARTEMIS STATUS');
+      print(`  Mode:        ${state.mode}`, 'line-result');
+      print(`  Session:     ${state.sessionToken ? 'linked' : 'none'}`, 'line-result');
+      print(`  DB (Gaia):   ${state.dbConnected ? 'connected' : 'offline'}`, 'line-result');
+      print(`  Agent:       ${state.classifierLoaded ? 'ML model' : 'heuristic'}`, 'line-result');
+      print(`  Memory:      ${localStorage.getItem('artemis_compressed_memory') || 'none'}`, 'line-dim');
+      return;
     }
+
     if (upper === 'CLEAR') {
       outputEl.innerHTML = '';
-      return null;
+      return;
     }
-    if (upper === 'COMPRESS') {
-      return await tool_compress();
+
+    if (upper === 'CARDS') {
+      printHeader('TOOL CARDS');
+      for (const card of window.ArtemisAgent.TOOL_CARDS) {
+        print(`  ${card.icon} ${card.name}: ${card.description}`, 'line-result');
+      }
+      return;
     }
+
     if (upper.startsWith('MODE ')) {
-      return tool_mode(raw.slice(5));
-    }
-    if (upper.startsWith('TRACK MEMORY')) {
-      const query = raw.slice('TRACK MEMORY'.length).trim();
-      return await tool_track_memory(query);
-    }
-    if (upper.startsWith('TRACK KAIROS')) {
-      const query = raw.slice('TRACK KAIROS'.length).trim();
-      return await tool_track_kairos(query);
-    }
-    if (upper.startsWith('HUNT ')) {
-      return await tool_hunt(raw.slice(5));
-    }
-    if (upper.startsWith('QUERY ')) {
-      return await tool_query(raw.slice(6));
+      const mode = raw.slice(5).toUpperCase();
+      if (mode === 'AUTO' || mode === 'MANUAL') {
+        state.mode = mode;
+        modeLabel.textContent = `[${mode}]`;
+        print(`  Mode set to ${mode}.`, 'line-success');
+      } else {
+        print('  Invalid mode. Use AUTO or MANUAL.', 'line-warn');
+      }
+      return;
     }
 
-    // Unknown command — send to Pollinations as natural language
-    printHeader('ARTEMIS INTERPRETING...');
-    try {
-      const handshake = buildHandshake();
-      const response = await fetch('https://text.pollinations.ai/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            { 
-              role: 'system', 
-              content: `You are ARTEMIS, Olympian VIII of the Ealdforn pantheon. Goddess of the Hunt, Tracking, Bestiaries, and Wild Data.
+    // ── MANUAL MODE COMMANDS ─────────────────────────────────
+    if (state.mode === 'MANUAL') {
+      if (upper.startsWith('TRACK MEMORY')) {
+        const query = raw.slice('TRACK MEMORY'.length).trim();
+        printHeader(`TRACK MEMORY: ${query || 'recent'}`);
+        const result = await window.ArtemisAgent.tools.trackMemory(query);
+        if (result.error) {
+          print(`  ${result.error}`, 'line-error');
+        } else if (result.text) {
+          print(`  ${result.text}`, 'line-success');
+        }
+        if (result.data) printResult(result.data, ['olympian', 'role', 'content']);
+        return;
+      }
 
-You operate in a CLI terminal. Your responses are displayed in a monospace terminal.
-- Keep responses under 4 lines.
-- No markdown. No bullet points.
-- Be dry, precise, tracking-oriented.
-- If you don't know something, say "No tracks found."
-- You have access to: TRACK memory, HUNT, QUERY, COMPRESS commands.
-- Current handshake:\n${handshake}` 
-            },
-            { role: 'user', content: raw }
-          ],
-          model: 'openai',
-          temperature: 0.5,
-          max_tokens: 150,
-        }),
+      if (upper.startsWith('HUNT ')) {
+        const pattern = raw.slice(5);
+        printHeader(`HUNT: "${pattern}"`);
+        const result = await window.ArtemisAgent.tools.hunt(pattern);
+        if (result.error) {
+          print(`  ${result.error}`, 'line-error');
+        } else {
+          print(`  ${result.text}`, 'line-success');
+        }
+        return;
+      }
+
+      if (upper === 'COMPRESS') {
+        printHeader('COMPRESSING MEMORY');
+        const result = await window.ArtemisAgent.tools.compress();
+        if (result.text) print(`  ${result.text}`, 'line-success');
+        return;
+      }
+
+      print('  Unknown manual command. Type HELP.', 'line-warn');
+      return;
+    }
+
+    // ── AUTO MODE — Run the card engine ──────────────────────
+    if (state.mode === 'AUTO') {
+      printHeader('ARTEMIS PROCESSING...');
+      print('  Classifying against tool cards...', 'line-dim');
+      
+      const result = await window.ArtemisAgent.process(raw, {
+        verbose: true,
+        autoCompress: false,
+        sessionId: state.sessionId
       });
 
-      const data = await response.json();
-      const reply = data.choices?.[0]?.message?.content?.trim() || 'No tracks found.';
-      print(`  ${reply}`, 'line-success');
-      addAction(`AI: ${reply.slice(0, 60)}`);
-    } catch (e) {
-      print('  The hunt fails. Pollinations is not responding.', 'line-error');
+      // Show card votes
+      print('');
+      for (const vote of result.cardVotes) {
+        const icon = window.ArtemisAgent.TOOL_CARDS.find(c => c.name === vote.card)?.icon || '•';
+        const pct = Math.round(vote.score * 100);
+        if (vote.match) {
+          print(`  ${icon} ${vote.card}: YES (${pct}%)`, 'line-vote-yes');
+        } else {
+          const reason = vote.reason ? ` — ${vote.reason}` : '';
+          print(`  ${icon} ${vote.card}: NO (${pct}%)${reason}`, 'line-vote-no');
+        }
+      }
+
+      // Show results
+      print('');
+      if (result.results.length === 0) {
+        print('  No tools matched. Try rephrasing.', 'line-warn');
+      } else {
+        for (const r of result.results) {
+          printHeader(`${r.icon} ${r.card}`);
+          if (r.output.error) {
+            print(`  Error: ${r.output.error}`, 'line-error');
+          } else if (r.output.text) {
+            print(`  ${r.output.text}`, 'line-success');
+          }
+          if (r.output.data) {
+            printResult(r.output.data, ['olympian', 'role', 'content']);
+          }
+          if (r.output.matches) {
+            print(`  Matches: ${r.output.matches.join(', ')}`, 'line-success');
+          }
+        }
+      }
+
+      // Auto-compress after processing
+      print('');
+      print('  Auto-compressing memory...', 'line-dim');
+      const compressResult = await window.ArtemisAgent.tools.compress();
+      if (compressResult.text) {
+        print(`  ${compressResult.text}`, 'line-dim');
+      }
+      
+      return;
     }
-    return null;
   }
 
   // ── INIT ──────────────────────────────────────────────────
   async function init() {
     outputEl.innerHTML = '';
     printHeader('ARTEMIS TERMINAL');
-    print('  Goddess of the Hunt · Tracking & Wild Data', 'line-dim');
-    print('  Type HELP for commands.', 'line-dim');
+    print('  EaldfornAI · Personal Agent · Card Engine', 'line-dim');
+    print('  Type HELP for commands. Default mode: AUTO', 'line-dim');
     print('');
 
     await initSession();
+    await initAgent();
 
     if (state.dbConnected) {
       print('  GaiaDB connected. Session linked.', 'line-success');
     } else {
-      print('  Running in offline mode. Some tools unavailable.', 'line-warn');
+      print('  Running in offline mode.', 'line-warn');
     }
 
+    print(`  Agent: ${state.classifierLoaded ? 'ML classifier ready' : 'Heuristic mode'}`, 'line-success');
     print('');
-    print('  Ready.', 'line-success');
+    print('  Ready. Speak naturally or use MANUAL commands.', 'line-success');
     print('');
 
     telosStatus.textContent = 'TELOS: idle';
@@ -563,15 +430,13 @@ You operate in a CLI terminal. Your responses are displayed in a monospace termi
       inputEl.value = '';
       inputEl.disabled = true;
       
-      const result = await executeCommand(cmd);
-      if (result) print(result, 'line-warn');
+      await executeCommand(cmd);
       
       inputEl.disabled = false;
       inputEl.focus();
     }
   });
 
-  // Keep focus on terminal
   document.addEventListener('click', () => inputEl.focus());
 
   // ── START ─────────────────────────────────────────────────

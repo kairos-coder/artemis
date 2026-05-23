@@ -31,8 +31,26 @@ const ARTEMIS_CARD_DECK = [
         execute: null,
         cardFile: 'gaiaRecall.js'
     },
+    
     {
-        id: 'text_generation',
+    id: 'memory_manager',
+    name: 'Memory Manager',
+    icon: '🧿',
+    category: 'meta',
+    description: 'LocalDB cache, memory graph, session timeout with GaiaDB summary push',
+    matchPatterns: [],
+    defaultWeight: 1.0,
+    requires: ['supabase_client'],
+    produces: ['memory_cache', 'graph_update', 'session_summary'],
+    timeout: 5000,
+    retryOnFail: false,
+    maxRetries: 1,
+    execute: null,
+    autoTrigger: true,
+    cardFile: 'memoryManager.js'
+},       
+    {
+    id: 'text_generation',
         name: 'Text Generation',
         icon: '💬',
         category: 'generation',

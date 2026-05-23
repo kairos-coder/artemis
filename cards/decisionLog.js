@@ -100,43 +100,57 @@ const decisionLog = {
      * Lightweight weight adjustment based on output quality signals.
      * Cards that produce substantive outputs get a micro-boost.
      */
-    _updateWeights(executedCards, outputs) {
-        try {
-            const weightsKey = 'artemis_card_weights';
-            const weights = JSON.parse(localStorage.getItem(weightsKey) || '{}');
-            
-            executedCards.forEach(card => {
-                if (!weights[card.id]) {
-                    weights[card.id] = {
-                        weight: card.defaultWeight || 0.5,
-                        plays: 0,
-                        successes: 0,
-                        lastAdjusted: new Date().toISOString()
-                    };
+   _updateWeights(executedCards, outputs) {
+    try {
+        const weightsKey = 'artemis_card_weights';
+        const weights = JSON.parse(localStorage.getItem(weightsKey) || '{}');
+        const tableName = SUPABASE_CONFIG?.tables?.artemisWeights || 'artemis_card_weights';
+
+        executedCards.forEach(async (card) => {
+            if (!weights[card.id]) {
+                weights[card.id] = {
+                    weight: card.defaultWeight || 0.5,
+                    plays: 0,
+                    successes: 0,
+                    lastAdjusted: new Date().toISOString()
+                };
+            }
+
+            weights[card.id].plays += 1;
+
+            const produced = this._cardProducedOutput(card.id, outputs);
+            if (produced) {
+                weights[card.id].successes += 1;
+                weights[card.id].weight = Math.min(0.95, weights[card.id].weight + 0.01);
+            }
+
+            weights[card.id].lastAdjusted = new Date().toISOString();
+
+            // Persist to Supabase weights table
+            if (supabase) {
+                try {
+                    await supabase
+                        .from(tableName)
+                        .upsert({
+                            card_id: card.id,
+                            card_name: card.name || card.id,
+                            weight: weights[card.id].weight,
+                            plays: weights[card.id].plays,
+                            successes: weights[card.id].successes,
+                            success_rate: weights[card.id].successes / Math.max(weights[card.id].plays, 1),
+                            last_adjusted: new Date().toISOString()
+                        }, { onConflict: 'card_id' });
+                } catch (err) {
+                    // Non-critical — localStorage still works
                 }
-                
-                weights[card.id].plays += 1;
-                
-                // Signal: did this card produce something useful?
-                const produced = this._cardProducedOutput(card.id, outputs);
-                if (produced) {
-                    weights[card.id].successes += 1;
-                    // Micro-boost for success (0.01 per success, capped at 0.95)
-                    weights[card.id].weight = Math.min(
-                        0.95,
-                        weights[card.id].weight + 0.01
-                    );
-                }
-                
-                weights[card.id].lastAdjusted = new Date().toISOString();
-            });
-            
-            localStorage.setItem(weightsKey, JSON.stringify(weights));
-        } catch (err) {
-            // Non-critical — silently fail
-            console.warn('[DecisionLog] Weight update failed:', err.message);
-        }
-    },
+            }
+        });
+
+        localStorage.setItem(weightsKey, JSON.stringify(weights));
+    } catch (err) {
+        console.warn('[DecisionLog] Weight update failed:', err.message);
+    }
+}
     
     /**
      * Check if a card produced meaningful output.

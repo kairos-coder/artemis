@@ -70,6 +70,7 @@ const TOOL_CARDS = [
 You are a personal AI agent with tool access. You respond in a chat interface.
 - Be concise. 2-4 sentences unless asked for detail.
 - You are helpful but not chatty. You track, retrieve, and report.
+- Never output character counts, token counts, or analyze your own response length.
 - You have access to: conversation memory (GaiaDB), image generation, repo search, and memory compression.
 - Current context: ${handshake}`
               },
@@ -82,7 +83,14 @@ You are a personal AI agent with tool access. You respond in a chat interface.
         });
         
         const data = await response.json();
-        return { text: data.choices?.[0]?.message?.content?.trim() || 'No response generated.' };
+        let text = data.choices?.[0]?.message?.content?.trim() || 'No response generated.';
+        
+        // Sanity check: if response is a character count loop, discard it
+        if (text.includes('->') && (text.includes('space') || text.includes('characters'))) {
+          text = 'I tracked what you asked. The hunt is complete. What else shall I find?';
+        }
+        
+        return { text };
       } catch (e) {
         return { error: e.message };
       }
@@ -165,37 +173,66 @@ You are a personal AI agent with tool access. You respond in a chat interface.
         const sb = getSb();
         const recentActions = context.recentActions || [];
         
-        let conversationsData = { data: [] };
+        let topics = '';
         if (sb && context.sessionId) {
           const result = await sb
             .from('conversations')
             .select('content, olympian')
             .eq('session_id', context.sessionId)
             .order('created_at', { ascending: false })
-            .limit(10);
-          conversationsData = result;
+            .limit(8);
+          
+          topics = (result.data || [])
+            .map(c => `${c.olympian}:${(c.content || '').slice(0, 30)}`)
+            .join('|');
         }
         
-        const topics = (conversationsData.data || [])
-          .map(c => `${c.olympian}: ${(c.content || '').slice(0, 40)}`)
-          .join(' | ');
+        // Try Pollinations for smart compression
+        let compressed = '';
+        try {
+          const response = await fetch('https://text.pollinations.ai/openai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: [
+                { 
+                  role: 'system', 
+                  content: 'Output ONLY a pipe-delimited list of 5-8 keywords under 120 characters. No sentences. No counting. No explanations. Just: keyword1|keyword2|keyword3' 
+                },
+                { 
+                  role: 'user', 
+                  content: `Topics: ${topics || 'none'}. Actions: ${recentActions.slice(-3).join('|')}` 
+                }
+              ],
+              model: 'openai',
+              temperature: 0.2,
+              max_tokens: 25,
+            }),
+          });
+          
+          const data = await response.json();
+          compressed = data.choices?.[0]?.message?.content?.trim() || '';
+          
+          // Sanity check: discard if it's a character count or too long
+          if (compressed.length > 150 || 
+              (compressed.includes('->') && compressed.includes('space')) ||
+              compressed.includes('Let\'s count')) {
+            compressed = '';
+          }
+        } catch (e) {
+          // Pollinations failed, use local fallback
+        }
         
-        const response = await fetch('https://text.pollinations.ai/openai', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: [
-              { role: 'system', content: 'Compress the following into a dense, keyword-rich summary under 120 characters. Use pipe delimiters. No sentences. No articles. Just keywords and connections.' },
-              { role: 'user', content: `Topics: ${topics}\nActions: ${recentActions.slice(-5).join(' | ')}` }
-            ],
-            model: 'openai',
-            temperature: 0.3,
-            max_tokens: 60,
-          }),
-        });
-        
-        const data = await response.json();
-        const compressed = data.choices?.[0]?.message?.content?.trim() || topics.slice(0, 120);
+        // Local fallback compression
+        if (!compressed) {
+          const words = (topics + ' ' + recentActions.slice(-3).join(' '))
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .split(/\s+/)
+            .filter(w => w.length > 3)
+            .slice(0, 10);
+          compressed = [...new Set(words)].join('|').slice(0, 120);
+        }
         
         localStorage.setItem('artemis_compressed_memory', compressed);
         
@@ -204,10 +241,9 @@ You are a personal AI agent with tool access. You respond in a chat interface.
           snapshot: compressed
         };
       } catch (e) {
-        // Local fallback compression
-        const snapshot = (context.recentActions || []).slice(-5).join(' | ').slice(0, 120);
-        localStorage.setItem('artemis_compressed_memory', snapshot);
-        return { text: `Memory compressed locally: "${snapshot}"`, snapshot };
+        const snapshot = (context.recentActions || []).slice(-3).join('|').slice(0, 120);
+        try { localStorage.setItem('artemis_compressed_memory', snapshot); } catch (e2) {}
+        return { text: 'Memory compressed locally.', snapshot };
       }
     }
   }
@@ -258,12 +294,23 @@ async function loadClassifier() {
   classifierLoading = true;
   
   try {
-    const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');
+    const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');
+    
+    // Force Transformers.js to use Hugging Face CDN, not local domain
+    env.localModelPath = null;
+    env.allowRemoteModels = true;
+    env.useBrowserCache = true;
+    env.remoteHost = 'https://huggingface.co';
+    env.remotePathTemplate = '{model}/resolve/{revision}/';
     
     classifier = await pipeline(
       'text-classification',
       'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
-      { quantized: true }
+      { 
+        quantized: true,
+        cache_dir: null,
+        local_files_only: false
+      }
     );
     
     classifierReady = true;
@@ -303,8 +350,8 @@ function heuristicClassify(matchPattern, userInput) {
   const lower = userInput.toLowerCase();
   
   const keywords = {
-    'GaiaDB_recall': ['find', 'search', 'recall', 'remember', 'memory', 'memories', 'look up', 'history', 'past', 'discussed', 'conversation', 'what did', 'when did'],
-    'Pollinations-Text': ['explain', 'analyze', 'what', 'how', 'why', 'tell me', 'describe', 'summarize', 'think', 'who', 'where', 'can you'],
+    'GaiaDB_recall': ['find', 'search', 'recall', 'remember', 'memory', 'memories', 'look up', 'history', 'past', 'discussed', 'conversation', 'what did', 'when did', 'tracking'],
+    'Pollinations-Text': ['explain', 'analyze', 'what', 'how', 'why', 'tell me', 'describe', 'summarize', 'think', 'who', 'where', 'can you', 'help'],
     'Pollinations-Image': ['generate', 'image', 'picture', 'show me', 'create', 'visual', 'art', 'draw', 'photo', 'paint', 'render'],
     'Browser-Hunt': ['hunt', 'repo', 'code', 'search for', 'find in', 'across', 'repositories', 'github', 'file', 'project'],
     'COMPRESS': ['compress', 'snapshot', 'save memory', 'summarize', 'condense', 'compact', 'save this', 'remember this']
@@ -348,10 +395,12 @@ function buildHandshake() {
 
 function addAction(action) {
   if (typeof localStorage === 'undefined') return;
-  const actions = JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]');
-  actions.push(`${new Date().toISOString().slice(11, 19)} ${action}`);
-  if (actions.length > 30) actions.splice(0, actions.length - 25);
-  localStorage.setItem('artemis_recent_actions', JSON.stringify(actions));
+  try {
+    const actions = JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]');
+    actions.push(`${new Date().toISOString().slice(11, 19)} ${action}`);
+    if (actions.length > 30) actions.splice(0, actions.length - 25);
+    localStorage.setItem('artemis_recent_actions', JSON.stringify(actions));
+  } catch (e) {}
 }
 
 // ── SESSION HELPER ───────────────────────────────────────────

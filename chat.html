@@ -289,7 +289,65 @@
             autocomplete="off" onkeydown="handleKeyDown(event)"></textarea>
         <button id="btnSend" onclick="sendMessage()">SEND</button>
     </div>
-
+    <!-- ═══════════════════════════════════════════════════════════ -->
+<!--  SHARED BROWSER MODEL LOADER                               -->
+<!--  Loads once, shared by all cards via window.__artemis_*    -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<script type="module">
+  console.log('[Artemis] Loading shared browser models...');
+  
+  try {
+    const { pipeline, env } = await import(
+      'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.16.1/dist/transformers.min.js'
+    );
+    
+    env.localModelPath = null;
+    env.allowRemoteModels = true;
+    env.useBrowserCache = true;
+    env.remoteHost = 'https://huggingface.co';
+    env.remotePathTemplate = '{model}/resolve/{revision}/';
+    
+    // ── Model 1: LaMini-T5 223M (text generation + card voting) ──
+    console.log('[Artemis] Loading LaMini-T5 223M (~200MB)...');
+    const textModel = await pipeline('text2text-generation', 'Xenova/LaMini-T5-223M', {
+      quantized: true,
+      progress_callback: (p) => {
+        if (p?.status === 'progress' && p?.loaded && p?.total) {
+          const pct = Math.round((p.loaded / p.total) * 100);
+          document.getElementById('tierBadge').textContent = '⟳ LOADING ' + pct + '%';
+        } else if (p?.status === 'done') {
+          document.getElementById('tierBadge').textContent = '◈ READY';
+        }
+      }
+    });
+    
+    window.__artemisTextModel = textModel;
+    window.__artemisTextModelReady = true;
+    window.__artemisTextModelName = 'LaMini-T5 223M';
+    console.log('[Artemis] Text model ready.');
+    
+    // ── Model 2: DistilBERT 67MB (query classification) ──
+    console.log('[Artemis] Loading DistilBERT 67MB...');
+    const queryModel = await pipeline(
+      'text-classification',
+      'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+      { quantized: true }
+    );
+    
+    window.__artemisQueryModel = queryModel;
+    window.__artemisQueryModelReady = true;
+    window.__artemisQueryModelName = 'DistilBERT 67MB';
+    console.log('[Artemis] Query classifier ready.');
+    
+    document.getElementById('tierBadge').textContent = '◈ READY';
+    document.getElementById('tierBadge').style.color = 'var(--accent)';
+    
+  } catch (err) {
+    console.warn('[Artemis] Browser models failed:', err.message);
+    document.getElementById('tierBadge').textContent = '◈ HEURISTIC';
+    document.getElementById('tierBadge').style.color = '#c0a060';
+  }
+</script>    
     <!-- SCRIPTS -->
     <script src="cards/config.js"></script>
     <script src="cards/decisionLog.js"></script>

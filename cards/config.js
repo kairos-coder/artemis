@@ -33,28 +33,47 @@ const ARTEMIS_CARD_DECK = [
     },
     
     {
-    id: 'memory_manager',
-    name: 'Memory Manager',
-    icon: '🧿',
-    category: 'meta',
-    description: 'LocalDB cache, memory graph, session timeout with GaiaDB summary push',
-    matchPatterns: [],
-    defaultWeight: 1.0,
-    requires: ['supabase_client'],
-    produces: ['memory_cache', 'graph_update', 'session_summary'],
-    timeout: 5000,
-    retryOnFail: false,
-    maxRetries: 1,
-    execute: null,
-    autoTrigger: true,
-    cardFile: 'memoryManager.js'
-},       
+        id: 'memory_manager',
+        name: 'Memory Manager',
+        icon: '🧿',
+        category: 'meta',
+        description: 'LocalDB cache, memory graph, session timeout with GaiaDB summary push',
+        matchPatterns: [],
+        defaultWeight: 1.0,
+        requires: ['supabase_client'],
+        produces: ['memory_cache', 'graph_update', 'session_summary'],
+        timeout: 5000,
+        retryOnFail: false,
+        maxRetries: 1,
+        execute: null,
+        autoTrigger: true,
+        cardFile: 'memoryManager.js'
+    },
+    
     {
-    id: 'text_generation',
+        id: 'card_voter',
+        name: 'Card Voter',
+        icon: '🧠',
+        category: 'meta',
+        description: 'Browser model (SmolLM2 135M ~86MB) that votes YES/NO on tool cards — smart classification above heuristic fallback',
+        matchPatterns: [],
+        defaultWeight: 1.0,
+        requires: [],
+        produces: ['card_votes'],
+        timeout: 5000,
+        retryOnFail: false,
+        maxRetries: 1,
+        execute: null,
+        autoTrigger: true,
+        cardFile: 'cardVoter.js'
+    },
+    
+    {
+        id: 'text_generation',
         name: 'Text Generation',
         icon: '💬',
         category: 'generation',
-        description: 'Tiered text gen: Pollinations → Browser Model (SmolLM2 135M) → Scripted fallback',
+        description: 'Tiered text gen: Pollinations → Browser Model (Qwen2 0.5B) → Scripted fallback',
         matchPatterns: [
             'hello', 'hi', 'hey', "what's up",
             'generate', 'write', 'create', 'tell me', 'explain',
@@ -118,7 +137,7 @@ const ARTEMIS_CARD_DECK = [
         name: 'COMPRESS',
         icon: '🗜️',
         category: 'memory',
-        description: 'Extract patterns from conversation, write to GaiaDB, update weights',
+        description: 'Extract patterns from conversation, build Ealdforn compression token, write to GaiaDB, update weights',
         matchPatterns: [
             'compress', 'save this', 'remember this', 'store',
             'log', 'note this', 'keep this', 'archive', 'record',
@@ -126,7 +145,7 @@ const ARTEMIS_CARD_DECK = [
         ],
         defaultWeight: 0.6,
         requires: ['supabase_client'],
-        produces: ['compressed_memory', 'pattern_update'],
+        produces: ['compressed_memory', 'pattern_update', 'ealdforn_token'],
         timeout: 10000,
         retryOnFail: true,
         maxRetries: 2,
@@ -182,19 +201,50 @@ const CARD_CATEGORIES = {
 // ROUTER CONFIGURATION
 // ============================================
 const ROUTER_CONFIG = {
+    // Minimum confidence score for a card to be played
     confidenceThreshold: 0.35,
-    maxCardsPerTurn: 3,
+    
+    // Maximum cards that can fire per turn
+    maxCardsPerTurn: 4,
+    
+    // Whether the same card can fire multiple times per turn
     allowDuplicateCards: false,
+    
+    // Execution order by category priority
     executionOrder: ['meta', 'memory', 'retrieval', 'generation'],
+    
+    // Weight learning
     learningRate: 0.05,
     learningWarmup: 5,
+    
+    // Classification mode: 'heuristic' or 'ml'
+    // ML mode activates when card_voter model is loaded
     classifierMode: 'heuristic',
+    
+    // Card voter configuration (dedicated decision engine)
+    cardVoter: {
+        enabled: true,
+        primaryModel: 'SmolLM2-135M-Instruct-q4f16_1-MLC-1k',
+        primaryLabel: 'SmolLM2 135M',
+        primarySize: '~86 MB',
+        fallbackModel: 'Qwen2-0.5B-Instruct-q4f16_1-MLC-1k',
+        fallbackLabel: 'Qwen2 0.5B',
+        loadOnBoot: true,
+        warmupPrompt: 'Card: test\nDescription: This is a test card\nUser input: "hello"\n\nDoes this card match the user\'s intent? Answer only YES or NO.',
+        fallbackToHeuristic: true
+    },
+    
+    // Legacy ML config (used if card_voter is disabled)
     mlModel: {
-        task: 'zero-shot-classification',
-        model: 'Xenova/distilbert-base-uncased-mnli',
+        task: 'text-generation',
+        model: 'SmolLM2-135M-Instruct-q4f16_1-MLC-1k',
+        fallbackModel: 'Qwen2-0.5B-Instruct-q4f16_1-MLC-1k',
+        label: 'SmolLM2 135M',
+        size: '~86 MB',
+        cacheModel: true,
+        useForVoting: true,
         candidateLabels: [],
-        hypothesisTemplate: "The user wants to {}",
-        cacheModel: true
+        hypothesisTemplate: "The user wants to {}"
     }
 };
 
@@ -202,16 +252,28 @@ const ROUTER_CONFIG = {
 // PERSISTENCE CONFIG
 // ============================================
 const PERSISTENCE_CONFIG = {
+    // GaiaDB tables
     decisionsTable: 'artemis_decisions',
     patternsTable: 'artemis_patterns',
     weightsTable: 'artemis_card_weights',
+    
+    // LocalStorage keys
     localKeys: {
         compressedMemory: 'artemis_compressed_memory',
         recentActions: 'artemis_recent_actions',
         cardWeights: 'artemis_card_weights',
-        decisionHistory: 'artemis_decision_history'
+        decisionHistory: 'artemis_decision_history',
+        voterModelState: 'artemis_voter_model_state',
+        compressionToken: 'artemis_compression_token',
+        memoryGraph: 'artemis_memory_graph',
+        localDB: 'artemis_localdb'
     },
-    maxLocalDecisions: 100
+    
+    // Limits
+    maxLocalDecisions: 100,
+    maxLocalPatterns: 200,
+    maxLocalDBMessages: 200,
+    maxGraphNodes: 500
 };
 
 // ============================================
@@ -230,6 +292,13 @@ const SUPABASE_CONFIG = {
 };
 
 // ============================================
+// AUTO-TRIGGER CARDS (run every cycle)
+// ============================================
+// Cards with autoTrigger: true are added here automatically
+// by the agent loader. Listed explicitly for clarity.
+const AUTO_TRIGGER_CARDS = ['memory_manager', 'card_voter', 'decision_log'];
+
+// ============================================
 // EXPORT
 // ============================================
 if (typeof module !== 'undefined' && module.exports) {
@@ -238,6 +307,7 @@ if (typeof module !== 'undefined' && module.exports) {
         CARD_CATEGORIES,
         ROUTER_CONFIG,
         PERSISTENCE_CONFIG,
-        SUPABASE_CONFIG
+        SUPABASE_CONFIG,
+        AUTO_TRIGGER_CARDS
     };
 }

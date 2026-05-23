@@ -6,20 +6,20 @@ var textGeneration = {
     _pollinationsConsecutiveFails: 0,
     
     // Tier 2 state
-_modelEngine: null,
-_modelLoaded: false,
-_modelLoading: false,
-_modelLoadProgress: 0,
-_modelName: 'SmolLM2-135M-Instruct-q4f16_1-MLC-1k',
-_modelLabel: 'SmolLM2 135M',
+    _modelEngine: null,
+    _modelLoaded: false,
+    _modelLoading: false,
+    _modelLoadProgress: 0,
+    _modelName: 'Qwen2-0.5B-Instruct-q4f16_1-MLC-1k',
+    _modelLabel: 'Qwen2 0.5B',
 
-// Tiered models — starts with smallest, cascades up
-_modelTiers: [
-    { name: 'SmolLM2-135M-Instruct-q4f16_1-MLC-1k', label: 'SmolLM2 135M', size: '~220 MB' },
-    { name: 'SmolLM2-360M-Instruct-q4f16_1-MLC-1k', label: 'SmolLM2 360M', size: '~376 MB' },
-    { name: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC-1k', label: 'Qwen2.5 0.5B', size: '~945 MB' }
-],
-_currentTier: 0,
+    // Tiered models — starts with smallest, cascades up
+    _modelTiers: [
+        { name: 'Qwen2-0.5B-Instruct-q4f16_1-MLC-1k', label: 'Qwen2 0.5B', size: '~350 MB' },
+        { name: 'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC-1k', label: 'TinyLlama 1.1B', size: '~550 MB' },
+        { name: 'Llama-3.2-1B-Instruct-q4f16_1-MLC-1k', label: 'Llama 3.2 1B', size: '~750 MB' }
+    ],
+    _currentTier: 0,
     
     _systemPrompt: [
         'You are Artemis, an AI in a terminal. You can issue CLI commands.',
@@ -98,54 +98,94 @@ _currentTier: 0,
             var prompt = this._buildPrompt(input, memoryContext);
             
             var controller = new AbortController();
-            var timeout = setTimeout(function() { controller.abort(); }, 8000);
+            var timeout = setTimeout(function() { controller.abort(); }, 10000);
             
-            var response = await fetch(
-                'https://text.pollinations.ai/' + encodeURIComponent(prompt),
-                { signal: controller.signal }
-            );
+            var response = await fetch('https://text.pollinations.ai/openai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'system', content: this._systemPrompt },
+                        { role: 'user', content: prompt }
+                    ],
+                    model: 'openai',
+                    temperature: 0.7,
+                    max_tokens: 250
+                }),
+                signal: controller.signal
+            });
             
             clearTimeout(timeout);
             
             if (response.ok) {
-                var text = await response.text();
-                if (text && text.trim().length > 0) {
+                var data = await response.json();
+                var text = '';
+                
+                // Handle OpenAI-compatible response shape
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    text = data.choices[0].message.content || '';
+                } else if (data.text) {
+                    text = data.text;
+                } else if (typeof data === 'string') {
+                    text = data;
+                }
+                
+                text = (text || '').trim();
+                
+                if (text.length > 0) {
                     console.log('[TextGen] Tier 1 (Pollinations): ' + text.length + ' chars');
                     return {
                         success: true,
                         data: {
-                            text_output: text.trim(),
-                            text_length: text.trim().length,
+                            text_output: text,
+                            text_length: text.length,
                             tier: 'pollinations',
                             model: 'pollinations-free'
                         }
                     };
                 }
+            } else {
+                console.warn('[TextGen] Tier 1 returned status ' + response.status);
             }
         } catch (err) {
-            console.log('[TextGen] Tier 1 failed: ' + (err.name === 'AbortError' ? 'timeout' : err.message));
+            if (err.name === 'AbortError') {
+                console.log('[TextGen] Tier 1 timeout after 10s');
+            } else {
+                console.log('[TextGen] Tier 1 failed: ' + err.message);
+            }
         }
         return null;
     },
     
     _buildPrompt: function(input, memoryContext) {
-        var prompt = input;
-        if (memoryContext && memoryContext.length < 300) {
-            prompt = '[Context: ' + memoryContext.substring(0, 300) + ']\n' + prompt;
+        var prompt = '';
+        
+        if (memoryContext && memoryContext.length > 0) {
+            // Truncate memory context to avoid overwhelming the model
+            var truncated = memoryContext.length > 400 ? memoryContext.substring(0, 400) + '...' : memoryContext;
+            prompt += '[Context: ' + truncated + ']\n\n';
         }
-        if (prompt.length > 800) {
-            prompt = prompt.substring(0, 797) + '...';
+        
+        prompt += input;
+        
+        if (prompt.length > 1000) {
+            prompt = prompt.substring(0, 997) + '...';
         }
+        
         return prompt;
     },
     
     // ── TIER 2: BROWSER MODEL ────────────────────
     _startModelLoad: function() {
         var self = this;
+        
+        // Don't double-load
+        if (this._modelLoading || this._modelLoaded) return;
+        
         this._modelLoading = true;
         this._modelLoadProgress = 0;
         
-        console.log('[TextGen] Starting Tier 2 model load: ' + this._modelLabel);
+        console.log('[TextGen] Starting Tier 2 model load: ' + this._modelLabel + ' (' + this._modelTiers[this._currentTier].size + ')');
         
         this._ensureWebLLM().then(function() {
             var CreateMLCEngine = window.CreateMLCEngine;
@@ -155,21 +195,37 @@ _currentTier: 0,
                 return;
             }
             
-            CreateMLCEngine(self._modelName, {
+            var modelName = self._modelTiers[self._currentTier].name;
+            
+            CreateMLCEngine(modelName, {
                 initProgressCallback: function(progress) {
-                    self._modelLoadProgress = progress.progress;
+                    self._modelLoadProgress = progress.progress || 0;
+                    if (progress.text) {
+                        console.log('[TextGen] Load: ' + progress.text);
+                    }
                     if (progress.progress === 1) {
-                        console.log('[TextGen] Tier 2 model cached and ready');
+                        console.log('[TextGen] Tier 2 model downloaded and ready');
                     }
                 }
             }).then(function(engine) {
                 self._modelEngine = engine;
                 self._modelLoaded = true;
                 self._modelLoading = false;
+                self._modelLabel = self._modelTiers[self._currentTier].label;
                 console.log('[TextGen] Tier 2 ready: ' + self._modelLabel);
             }).catch(function(err) {
-                self._modelLoading = false;
-                console.warn('[TextGen] Tier 2 load failed: ' + err.message);
+                console.warn('[TextGen] Tier 2 model load failed: ' + err.message);
+                
+                // Try next tier
+                self._currentTier++;
+                if (self._currentTier < self._modelTiers.length) {
+                    console.log('[TextGen] Trying next tier: ' + self._modelTiers[self._currentTier].label);
+                    self._modelLoading = false;
+                    self._startModelLoad();
+                } else {
+                    self._modelLoading = false;
+                    console.warn('[TextGen] All model tiers exhausted — Tier 2 disabled');
+                }
             });
         }).catch(function(err) {
             self._modelLoading = false;
@@ -178,68 +234,85 @@ _currentTier: 0,
     },
     
     _tryBrowserModel: async function(input) {
+        if (!this._modelEngine) return null;
+        
         try {
             var messages = [
                 { role: 'system', content: this._systemPrompt },
                 { role: 'user', content: input }
             ];
             
-            var chunks = await this._modelEngine.chat.completions.create({
-                messages: messages,
-                stream: true,
-                temperature: 0.7,
-                max_tokens: 200
-            });
-            
             var reply = '';
-            for await (var chunk of chunks) {
-                reply += chunk.choices[0]?.delta.content ?? '';
+            
+            // Try streaming first
+            try {
+                var chunks = await this._modelEngine.chat.completions.create({
+                    messages: messages,
+                    stream: true,
+                    temperature: 0.7,
+                    max_tokens: 200
+                });
+                
+                for await (var chunk of chunks) {
+                    var content = chunk.choices?.[0]?.delta?.content;
+                    if (content) reply += content;
+                }
+            } catch (streamErr) {
+                // Fall back to non-streaming
+                console.log('[TextGen] Streaming failed, trying non-streaming: ' + streamErr.message);
+                var result = await this._modelEngine.chat.completions.create({
+                    messages: messages,
+                    stream: false,
+                    temperature: 0.7,
+                    max_tokens: 200
+                });
+                reply = result.choices?.[0]?.message?.content || '';
             }
             
-            console.log('[TextGen] Tier 2 (' + this._modelLabel + '): ' + reply.length + ' chars');
+            reply = reply.trim();
             
-            return {
-                success: true,
-                data: {
-                    text_output: reply.trim(),
-                    text_length: reply.length,
-                    tier: 'browser_model',
-                    model: this._modelLabel
-                }
-            };
+            if (reply.length > 0) {
+                console.log('[TextGen] Tier 2 (' + this._modelLabel + '): ' + reply.length + ' chars');
+                return {
+                    success: true,
+                    data: {
+                        text_output: reply,
+                        text_length: reply.length,
+                        tier: 'browser_model',
+                        model: this._modelLabel
+                    }
+                };
+            }
         } catch (err) {
             console.warn('[TextGen] Tier 2 generation failed: ' + err.message);
-            return null;
         }
+        return null;
     },
     
     _ensureWebLLM: async function() {
-    // Already loaded?
-    if (typeof window.CreateMLCEngine !== 'undefined') return;
-    
-    try {
-        // Official WebLLM CDN import (ES module via esm.run)
-        // This is the documented method from webllm.mlc.ai docs
-        var webllm = await import('https://esm.run/@mlc-ai/web-llm');
+        // Already loaded?
+        if (typeof window.CreateMLCEngine !== 'undefined') return;
         
-        // WebLLM exports CreateMLCEngine and other functions
-        // Make them available globally for our card
-        if (webllm.CreateMLCEngine) {
-            window.CreateMLCEngine = webllm.CreateMLCEngine;
+        try {
+            // Official WebLLM CDN import
+            var webllm = await import('https://esm.run/@mlc-ai/web-llm');
+            
+            if (webllm.CreateMLCEngine) {
+                window.CreateMLCEngine = webllm.CreateMLCEngine;
+            }
+            if (webllm.CreateWebWorkerEngine) {
+                window.CreateWebWorkerEngine = webllm.CreateWebWorkerEngine;
+            }
+            if (webllm.hasModelInCache) {
+                window.hasModelInCache = webllm.hasModelInCache;
+            }
+            
+            console.log('[TextGen] WebLLM loaded via ES module import');
+        } catch (err) {
+            console.warn('[TextGen] WebLLM import failed: ' + err.message);
+            throw new Error('WebLLM not available — browser may not support WebGPU or ES modules');
         }
-        if (webllm.CreateWebWorkerEngine) {
-            window.CreateWebWorkerEngine = webllm.CreateWebWorkerEngine;
-        }
-        if (webllm.hasModelInCache) {
-            window.hasModelInCache = webllm.hasModelInCache;
-        }
-        
-        console.log('[TextGen] WebLLM loaded via ES module import');
-    } catch (err) {
-        console.warn('[TextGen] WebLLM import failed: ' + err.message);
-        throw new Error('WebLLM not available — browser may not support WebGPU or ES modules');
-    }
-},
+    },
     
     // ── TIER 3: SCRIPTED FALLBACK ────────────────
     _scriptedFallback: function(input, memoryContext) {
@@ -251,7 +324,7 @@ _currentTier: 0,
         }
         
         // Greetings
-        if (lower.indexOf('hello') > -1 || lower.indexOf('hi') > -1 || lower.indexOf('hey') > -1 || lower.indexOf("what's up") > -1) {
+        if (lower.indexOf('hello') > -1 || lower.indexOf('hi') > -1 || lower.indexOf('hey') > -1 || lower.indexOf("what's up") > -1 || lower.indexOf("whats up") > -1) {
             var msg = 'Hail, hunter. ';
             if (memoryContext) {
                 msg += 'I remember our past exchanges. ';
@@ -262,11 +335,11 @@ _currentTier: 0,
         
         // Identity
         if (lower.indexOf('who are you') > -1 || lower.indexOf('what are you') > -1) {
-            return 'I am Artemis, Goddess of the Hunt, an EaldfornAI routing engine. Six cards in my deck. Monastery phase-lock active. I route queries through memory, generation, and retrieval.';
+            return 'I am Artemis, Goddess of the Hunt, an EaldfornAI routing engine. Seven cards in my deck. Monastery phase-lock active. I route queries through memory, generation, and retrieval.';
         }
         
         // Help
-        if (lower.indexOf('help') > -1) {
+        if (lower.indexOf('help') > -1 || lower === '?') {
             return 'Commands: STATUS | CARDS | WEIGHTS | HISTORY | RECALL <q> | GENERATE <p> | IMAGE <p> | COMPRESS <t> | AUDIT | SAY <msg>';
         }
         
@@ -299,7 +372,9 @@ _currentTier: 0,
         }
         
         // Default
-        return 'I hear you, hunter. My text engines are offline (Pollinations unavailable, local model not ready). Try STATUS, CARDS, or AUDIT to see what I can do while the models wake.';
+        var tier1Status = this._pollinationsAvailable ? 'available' : 'offline';
+        var tier2Status = this._modelLoaded ? 'ready (' + this._modelLabel + ')' : 'loading';
+        return 'I hear you, hunter. My text engines are on standby (Pollinations: ' + tier1Status + ', Local: ' + tier2Status + '). Try STATUS, CARDS, or AUDIT to see what I can do while the models wake.';
     },
     
     _generateKnowledgeReport: function() {
@@ -307,8 +382,11 @@ _currentTier: 0,
         parts.push('Here is everything I know, hunter:\n');
         
         // Session
-        var sessionId = localStorage.getItem('artemis_session_id') || 'unknown';
-        parts.push('Session: ' + sessionId.substring(0, 20) + '...');
+        var sessionId = 'unknown';
+        try {
+            sessionId = localStorage.getItem('artemis_session_id') || localStorage.getItem('apollo_session_token') || 'unknown';
+        } catch(e) {}
+        parts.push('Session: ' + (sessionId.length > 30 ? sessionId.substring(0, 30) + '...' : sessionId));
         
         // Decisions
         try {
@@ -318,10 +396,13 @@ _currentTier: 0,
                 parts.push('Recent queries:');
                 var recent = decisions.slice(-5);
                 for (var i = 0; i < recent.length; i++) {
-                    parts.push('  "' + (recent[i].input_text || '').substring(0, 60) + '"');
+                    var txt = (recent[i].input_text || '').substring(0, 60);
+                    if (txt) parts.push('  "' + txt + '"');
                 }
             }
-        } catch(e) {}
+        } catch(e) {
+            parts.push('Decisions: unavailable');
+        }
         
         // Weights
         try {
@@ -331,10 +412,14 @@ _currentTier: 0,
                 parts.push('Cards learned:');
                 for (var j = 0; j < ids.length; j++) {
                     var w = weights[ids[j]];
-                    parts.push('  ' + ids[j] + ': ' + w.plays + ' plays, weight ' + w.weight.toFixed(2));
+                    parts.push('  ' + ids[j] + ': ' + (w.plays || 0) + ' plays, weight ' + (w.weight || 0).toFixed(2));
                 }
+            } else {
+                parts.push('Cards learned: None yet');
             }
-        } catch(e) {}
+        } catch(e) {
+            parts.push('Cards learned: unavailable');
+        }
         
         // Patterns
         try {
@@ -343,14 +428,19 @@ _currentTier: 0,
                 parts.push('Patterns stored: ' + patterns.length);
                 var rp = patterns.slice(-5);
                 for (var k = 0; k < rp.length; k++) {
-                    parts.push('  [' + rp[k].type + '] ' + (rp[k].value || '').substring(0, 50));
+                    parts.push('  [' + (rp[k].type || '?') + '] ' + (rp[k].value || '').substring(0, 50));
                 }
             } else {
                 parts.push('Patterns: None yet.');
             }
-        } catch(e) {}
+        } catch(e) {
+            parts.push('Patterns: unavailable');
+        }
         
-        parts.push('\nSystem: 7 cards, heuristic classifier, Pollinations ' + (this._pollinationsAvailable ? 'available' : 'offline') + ', local model ' + (this._modelLoaded ? 'ready' : 'loading'));
+        // System status
+        parts.push('\nSystem: 7 cards, heuristic classifier');
+        parts.push('Pollinations: ' + (this._pollinationsAvailable ? 'available' : 'offline (' + this._pollinationsConsecutiveFails + ' fails)'));
+        parts.push('Local model: ' + (this._modelLoaded ? 'ready (' + this._modelLabel + ')' : this._modelLoading ? 'loading (' + Math.round(this._modelLoadProgress * 100) + '%)' : 'not started'));
         parts.push('Artemis EaldfornAI Router — Monastery Phase-Lock: ACTIVE');
         
         return parts.join('\n');

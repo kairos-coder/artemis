@@ -3,8 +3,10 @@
 // Used by both chat.html (human UI) and terminal.html (system GUI)
 // ═══════════════════════════════════════════════════════════════
 
-// ── SUPABASE (expects window.supabase to be initialized) ─────
-const sb = window.supabase;
+// ── SUPABASE (safe accessor — pages must set window.supabase first) ──
+function getSb() {
+  return (typeof window !== 'undefined' && window.supabase) ? window.supabase : null;
+}
 
 // ── CLASSIFIER STATE ─────────────────────────────────────────
 let classifier = null;
@@ -20,6 +22,9 @@ const TOOL_CARDS = [
     matchPattern: 'The user wants to search, recall, find, or look up past conversations, memories, things they discussed, or information from their chat history.',
     requiresDb: true,
     execute: async (input, context) => {
+      const sb = getSb();
+      if (!sb) return { error: 'Database not connected. Supabase client not initialized.' };
+      
       const keyword = extractKeyword(input);
       if (!keyword) return { error: 'No search keyword found.' };
       
@@ -34,7 +39,6 @@ const TOOL_CARDS = [
       if (error) return { error: error.message };
       if (!data || data.length === 0) return { text: `No memories found for "${keyword}".` };
       
-      // Format results
       const lines = data.map(m => 
         `[${m.olympian}] ${m.role}: ${m.content.slice(0, 120)}${m.content.length > 120 ? '...' : ''}`
       );
@@ -92,7 +96,7 @@ You are a personal AI agent with tool access. You respond in a chat interface.
     requiresDb: false,
     execute: async (input, context) => {
       const imgPrompt = input
-        .replace(/generate|show me|create an image of|image of|make an image|display/i, '')
+        .replace(/generate|show me|create an image of|image of|make an image|display/gi, '')
         .trim()
         .replace(/^["']|["']$/g, '');
       
@@ -158,20 +162,24 @@ You are a personal AI agent with tool access. You respond in a chat interface.
     requiresDb: true,
     execute: async (input, context) => {
       try {
-        // Get recent conversations for compression
+        const sb = getSb();
         const recentActions = context.recentActions || [];
-        const conversations = context.sessionId ? await sb
-          .from('conversations')
-          .select('content, olympian')
-          .eq('session_id', context.sessionId)
-          .order('created_at', { ascending: false })
-          .limit(10) : { data: [] };
         
-        const topics = (conversations.data || [])
+        let conversationsData = { data: [] };
+        if (sb && context.sessionId) {
+          const result = await sb
+            .from('conversations')
+            .select('content, olympian')
+            .eq('session_id', context.sessionId)
+            .order('created_at', { ascending: false })
+            .limit(10);
+          conversationsData = result;
+        }
+        
+        const topics = (conversationsData.data || [])
           .map(c => `${c.olympian}: ${(c.content || '').slice(0, 40)}`)
           .join(' | ');
         
-        // Use Pollinations to compress
         const response = await fetch('https://text.pollinations.ai/openai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -207,7 +215,6 @@ You are a personal AI agent with tool access. You respond in a chat interface.
 
 // ── KEYWORD EXTRACTORS ───────────────────────────────────────
 function extractKeyword(input) {
-  // Remove command-like prefixes
   let cleaned = input
     .replace(/find|search|recall|remember|look up|show me|get|retrieve/gi, '')
     .replace(/my |the |about |from |in |for /gi, '')
@@ -215,12 +222,10 @@ function extractKeyword(input) {
     .replace(/yesterday|today|last week|earlier/gi, '')
     .trim();
   
-  // If nothing left, use the original input
   if (!cleaned || cleaned.length < 2) {
     cleaned = input.trim();
   }
   
-  // Take first 3 meaningful words
   const words = cleaned.split(/\s+/).filter(w => w.length > 2);
   return words.slice(0, 3).join(' ');
 }
@@ -244,7 +249,6 @@ function extractPattern(input) {
 async function loadClassifier() {
   if (classifierReady) return classifier;
   if (classifierLoading) {
-    // Wait for existing load
     while (classifierLoading) {
       await new Promise(r => setTimeout(r, 100));
     }
@@ -254,7 +258,6 @@ async function loadClassifier() {
   classifierLoading = true;
   
   try {
-    // Dynamic import to avoid issues if Transformers.js isn't loaded yet
     const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');
     
     classifier = await pipeline(
@@ -268,7 +271,7 @@ async function loadClassifier() {
   } catch (e) {
     console.warn('Classifier failed to load, using heuristic fallback:', e.message);
     classifier = null;
-    classifierReady = true; // Mark as ready so we don't keep trying
+    classifierReady = true;
     return null;
   } finally {
     classifierLoading = false;
@@ -279,7 +282,6 @@ async function classifyIntent(matchPattern, userInput) {
   const model = await loadClassifier();
   
   if (!model) {
-    // Heuristic fallback: keyword matching
     return heuristicClassify(matchPattern, userInput);
   }
   
@@ -298,25 +300,25 @@ async function classifyIntent(matchPattern, userInput) {
 }
 
 function heuristicClassify(matchPattern, userInput) {
-  // Simple keyword-based classification as fallback
   const lower = userInput.toLowerCase();
-  const patternLower = matchPattern.toLowerCase();
   
   const keywords = {
-    'GaiaDB_recall': ['find', 'search', 'recall', 'remember', 'memory', 'memories', 'look up', 'history', 'past', 'discussed', 'conversation'],
-    'Pollinations-Text': ['explain', 'analyze', 'what', 'how', 'why', 'tell me', 'describe', 'summarize', 'think'],
-    'Pollinations-Image': ['generate', 'image', 'picture', 'show me', 'create', 'visual', 'art', 'draw', 'photo'],
-    'Browser-Hunt': ['hunt', 'repo', 'code', 'search for', 'find in', 'across', 'repositories', 'github', 'file'],
-    'COMPRESS': ['compress', 'snapshot', 'save memory', 'summarize', 'condense', 'compact']
+    'GaiaDB_recall': ['find', 'search', 'recall', 'remember', 'memory', 'memories', 'look up', 'history', 'past', 'discussed', 'conversation', 'what did', 'when did'],
+    'Pollinations-Text': ['explain', 'analyze', 'what', 'how', 'why', 'tell me', 'describe', 'summarize', 'think', 'who', 'where', 'can you'],
+    'Pollinations-Image': ['generate', 'image', 'picture', 'show me', 'create', 'visual', 'art', 'draw', 'photo', 'paint', 'render'],
+    'Browser-Hunt': ['hunt', 'repo', 'code', 'search for', 'find in', 'across', 'repositories', 'github', 'file', 'project'],
+    'COMPRESS': ['compress', 'snapshot', 'save memory', 'summarize', 'condense', 'compact', 'save this', 'remember this']
   };
   
-  // Find which card this pattern matches
   for (const [cardName, words] of Object.entries(keywords)) {
-    if (patternLower.includes(cardName.toLowerCase()) || 
-        patternLower.includes(cardName.replace('_', ' ').toLowerCase())) {
+    if (matchPattern.toLowerCase().includes(cardName.toLowerCase()) || 
+        matchPattern.toLowerCase().includes(cardName.replace('_', ' ').toLowerCase())) {
       const matchCount = words.filter(w => lower.includes(w)).length;
       if (matchCount >= 2) {
         return { match: true, score: 0.7 + (matchCount * 0.05) };
+      }
+      if (matchCount === 1 && lower.split(' ').length < 6) {
+        return { match: true, score: 0.65 };
       }
     }
   }
@@ -326,9 +328,15 @@ function heuristicClassify(matchPattern, userInput) {
 
 // ── HANDSHAKE PROTOCOL ────────────────────────────────────────
 function buildHandshake() {
-  const sessionToken = localStorage.getItem('apollo_session_token') || 'none';
-  const compressedMemory = localStorage.getItem('artemis_compressed_memory') || '';
-  const recentActions = JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]');
+  const sessionToken = (typeof localStorage !== 'undefined') 
+    ? localStorage.getItem('apollo_session_token') || 'none' 
+    : 'none';
+  const compressedMemory = (typeof localStorage !== 'undefined')
+    ? localStorage.getItem('artemis_compressed_memory') || ''
+    : '';
+  const recentActions = (typeof localStorage !== 'undefined')
+    ? JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]')
+    : [];
   
   return [
     `ARTEMIS//SESSION:${sessionToken}`,
@@ -339,27 +347,49 @@ function buildHandshake() {
 }
 
 function addAction(action) {
+  if (typeof localStorage === 'undefined') return;
   const actions = JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]');
   actions.push(`${new Date().toISOString().slice(11, 19)} ${action}`);
   if (actions.length > 30) actions.splice(0, actions.length - 25);
   localStorage.setItem('artemis_recent_actions', JSON.stringify(actions));
 }
 
+// ── SESSION HELPER ───────────────────────────────────────────
+async function getSessionId() {
+  if (typeof localStorage === 'undefined') return null;
+  const sb = getSb();
+  if (!sb) return null;
+  
+  const token = localStorage.getItem('apollo_session_token');
+  if (!token) return null;
+  
+  try {
+    const { data } = await sb.from('sessions').select('id').eq('session_token', token).single();
+    return data?.id || null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // ── MAIN PROCESS FUNCTION ────────────────────────────────────
 async function processInput(userInput, options = {}) {
   const { 
-    verbose = false,      // If true, return card-by-card results (for terminal)
-    autoCompress = false, // If true, auto-compress after processing
-    sessionId = null      // GaiaDB session ID
+    verbose = false,
+    autoCompress = false,
+    sessionId = null
   } = options;
   
   const handshake = buildHandshake();
   const context = {
     handshake,
     sessionId,
-    sessionToken: localStorage.getItem('apollo_session_token'),
-    recentActions: JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]'),
-    dbConnected: !!sessionId
+    sessionToken: (typeof localStorage !== 'undefined') 
+      ? localStorage.getItem('apollo_session_token') 
+      : null,
+    recentActions: (typeof localStorage !== 'undefined')
+      ? JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]')
+      : [],
+    dbConnected: !!sessionId && !!getSb()
   };
   
   const results = [];
@@ -367,7 +397,6 @@ async function processInput(userInput, options = {}) {
   
   // Phase 1: Classify each card
   for (const card of TOOL_CARDS) {
-    // Skip DB cards if no session
     if (card.requiresDb && !context.sessionId) {
       cardVotes.push({ card: card.name, match: false, score: 0, reason: 'no session' });
       continue;
@@ -377,7 +406,6 @@ async function processInput(userInput, options = {}) {
     cardVotes.push({ card: card.name, match: vote.match, score: vote.score });
     
     if (vote.match) {
-      // Phase 2: Execute matched cards
       try {
         const output = await card.execute(userInput, context);
         results.push({
@@ -399,9 +427,11 @@ async function processInput(userInput, options = {}) {
   if (autoCompress && !results.find(r => r.card === 'COMPRESS')) {
     const compressCard = TOOL_CARDS.find(c => c.name === 'COMPRESS');
     try {
-      const output = await compressCard.execute(userInput, context);
+      const output = await compressCard.execute('auto-compress', context);
       results.push({ card: 'COMPRESS', icon: '📦', output });
-    } catch (e) {}
+    } catch (e) {
+      // Silent fail for auto-compress
+    }
   }
   
   // Log action
@@ -411,11 +441,10 @@ async function processInput(userInput, options = {}) {
   // Build response text
   let responseText = '';
   if (results.length === 0) {
-    responseText = 'No tools matched your request. Try rephrasing or use the terminal for direct commands.';
+    responseText = 'No tools matched your request. Try rephrasing or use MANUAL mode for direct commands.';
   } else if (results.length === 1) {
     responseText = results[0].output.text || results[0].output.error || 'Task completed.';
   } else {
-    // Multiple results — combine
     const texts = results
       .filter(r => r.output.text)
       .map(r => `[${r.card}] ${r.output.text}`);
@@ -432,44 +461,35 @@ async function processInput(userInput, options = {}) {
 }
 
 // ── EXPORT ────────────────────────────────────────────────────
-// Make available globally for both chat.html and terminal.html
-window.ArtemisAgent = {
-  process: processInput,
-  loadClassifier,
-  buildHandshake,
-  addAction,
-  TOOL_CARDS,
-  classifyIntent,
-  // Expose for direct terminal commands
-  tools: {
-    trackMemory: async (query) => {
-      const card = TOOL_CARDS.find(c => c.name === 'GaiaDB_recall');
-      const sessionId = await getSessionId();
-      return card.execute(query, { sessionId, handshake: buildHandshake() });
-    },
-    hunt: async (pattern) => {
-      const card = TOOL_CARDS.find(c => c.name === 'Browser-Hunt');
-      return card.execute(pattern, { handshake: buildHandshake() });
-    },
-    compress: async () => {
-      const card = TOOL_CARDS.find(c => c.name === 'COMPRESS');
-      const sessionId = await getSessionId();
-      return card.execute('compress', { 
-        sessionId, 
-        handshake: buildHandshake(),
-        recentActions: JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]')
-      });
+if (typeof window !== 'undefined') {
+  window.ArtemisAgent = {
+    process: processInput,
+    loadClassifier,
+    buildHandshake,
+    addAction,
+    TOOL_CARDS,
+    classifyIntent,
+    tools: {
+      trackMemory: async (query) => {
+        const card = TOOL_CARDS.find(c => c.name === 'GaiaDB_recall');
+        const sessionId = await getSessionId();
+        return card.execute(query, { sessionId, handshake: buildHandshake() });
+      },
+      hunt: async (pattern) => {
+        const card = TOOL_CARDS.find(c => c.name === 'Browser-Hunt');
+        return card.execute(pattern, { handshake: buildHandshake() });
+      },
+      compress: async () => {
+        const card = TOOL_CARDS.find(c => c.name === 'COMPRESS');
+        const sessionId = await getSessionId();
+        return card.execute('compress', { 
+          sessionId, 
+          handshake: buildHandshake(),
+          recentActions: (typeof localStorage !== 'undefined')
+            ? JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]')
+            : []
+        });
+      }
     }
-  }
-};
-
-async function getSessionId() {
-  const token = localStorage.getItem('apollo_session_token');
-  if (!token || !sb) return null;
-  try {
-    const { data } = await sb.from('sessions').select('id').eq('session_token', token).single();
-    return data?.id || null;
-  } catch (e) {
-    return null;
-  }
+  };
 }

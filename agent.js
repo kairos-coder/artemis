@@ -339,52 +339,56 @@ var ArtemisAgent = (function() {
     // ============================================
     // PHASE 1: CLASSIFY (IMPROVED SCORING)
     // ============================================
-    function classifyInput(input) {
-        var inputLower = input.toLowerCase();
-        var votedCards = [];
+   function classifyInput(input) {
+    var inputLower = input.toLowerCase();
+    var votedCards = [];
+    var useModelVoting = typeof cardVoter !== 'undefined' && cardVoter.voteOnCard;
 
-        for (var i = 0; i < cardRegistry.length; i++) {
-            var card = cardRegistry[i];
+    for (var i = 0; i < cardRegistry.length; i++) {
+        var card = cardRegistry[i];
+        if (card.autoTrigger) continue;
+        if (!card.matchPatterns || card.matchPatterns.length === 0) continue;
 
-            // Skip auto-trigger cards and cards without patterns
-            if (card.autoTrigger) continue;
-            if (!card.matchPatterns || card.matchPatterns.length === 0) continue;
+        var score = 0;
+        var method = 'heuristic';
 
-            // Count how many patterns match
-            var matchCount = 0;
-            for (var j = 0; j < card.matchPatterns.length; j++) {
-                if (inputLower.indexOf(card.matchPatterns[j].toLowerCase()) > -1) {
-                    matchCount++;
-                }
-            }
+        // Try model voting first (synchronous check — model vote is async but we fire-and-forget)
+        // For full async model voting, the agent would need to be restructured.
+        // For now, use heuristic scoring with model fallback available to individual cards.
 
-            // If at least one pattern matched, calculate score
-            if (matchCount > 0) {
-                // NEW SCORING: base score = defaultWeight
-                // Single match gives full defaultWeight
-                // Additional matches add a small bonus (up to +0.3)
-                var baseScore = card.defaultWeight;
-                var matchBonus = Math.min((matchCount - 1) * 0.08, 0.3);
-                var score = Math.min(baseScore + matchBonus, 1.0);
-
-                // Apply learned modifier
-                var modifier = getLearnedModifier(card.id);
-                score *= modifier;
-
-                // Check against threshold
-                if (score >= (routerConfig.confidenceThreshold || 0.35)) {
-                    votedCards.push({
-                        id: card.id,
-                        name: card.name,
-                        icon: card.icon,
-                        category: card.category,
-                        score: score,
-                        matchCount: matchCount,
-                        card: card
-                    });
-                }
+        // Heuristic scoring
+        var matchCount = 0;
+        for (var j = 0; j < card.matchPatterns.length; j++) {
+            if (inputLower.indexOf(card.matchPatterns[j].toLowerCase()) > -1) {
+                matchCount++;
             }
         }
+
+        if (matchCount > 0) {
+            var baseScore = card.defaultWeight;
+            var matchBonus = Math.min((matchCount - 1) * 0.08, 0.3);
+            score = Math.min(baseScore + matchBonus, 1.0);
+            var modifier = getLearnedModifier(card.id);
+            score *= modifier;
+        }
+
+        if (score >= (routerConfig.confidenceThreshold || 0.35)) {
+            votedCards.push({
+                id: card.id,
+                name: card.name,
+                icon: card.icon,
+                category: card.category,
+                score: score,
+                matchCount: matchCount,
+                method: method,
+                card: card
+            });
+        }
+    }
+
+    votedCards.sort(function(a, b) { return b.score - a.score; });
+    return votedCards;
+}
 
         // Sort by score descending
         votedCards.sort(function(a, b) {

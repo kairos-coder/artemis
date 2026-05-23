@@ -1,15 +1,18 @@
 // ============================================
 // POLLINATIONS TEXT CARD — Free Text Generation
 // ============================================
+// Patched: sends user input directly, skips system
+// prompt to avoid Pollinations 500 on long URLs.
+// ============================================
 
 const pollinationsText = {
     id: 'pollinations_text',
     
     async run(context) {
-        const { input, systemPrompt, memoryContext } = context;
+        const { input, memoryContext } = context;
         
         try {
-            const fullPrompt = this._buildPrompt(input, systemPrompt, memoryContext);
+            const fullPrompt = this._buildPrompt(input, memoryContext);
             
             const response = await fetch(
                 `https://text.pollinations.ai/${encodeURIComponent(fullPrompt)}`
@@ -21,7 +24,6 @@ const pollinationsText = {
             
             const text = await response.text();
             
-            // Validate output
             if (!text || text.trim().length === 0) {
                 return {
                     success: false,
@@ -51,18 +53,20 @@ const pollinationsText = {
         }
     },
     
-    _buildPrompt(input, systemPrompt, memoryContext) {
-        let prompt = '';
+    _buildPrompt(input, memoryContext) {
+        // Keep it SHORT — Pollinations free tier 500s on long prompts
+        let prompt = input;
         
-        if (systemPrompt) {
-            prompt += `[System: ${systemPrompt}]\n\n`;
+        // Only attach memory context if it's brief
+        if (memoryContext && memoryContext.length < 400) {
+            prompt = `[Past: ${memoryContext.substring(0, 400)}]\n\n${prompt}`;
         }
         
-        if (memoryContext) {
-            prompt += `[Relevant past context:\n${memoryContext}]\n\n`;
+        // Hard cap at 1000 chars to prevent 500 errors
+        if (prompt.length > 1000) {
+            prompt = prompt.substring(0, 997) + '...';
         }
         
-        prompt += input;
         return prompt;
     }
 };

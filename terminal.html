@@ -1,447 +1,796 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Artemis Terminal · Ealdforn Studios</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    :root {
-      --bg:       #0a0f0a;
-      --surface:  #0e140e;
-      --text:     #c0d0c0;
-      --dim:      #5a6b5a;
-      --accent:   #8ab88a;
-      --bright:   #b8e0b8;
-      --warn:     #c8a050;
-      --error:    #a04040;
-      --ff:       'JetBrains Mono', monospace;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artemis Terminal — Ealdforn Studios</title>
+    <style>
+        :root {
+            --bg: #0a0e0f;
+            --surface: #111618;
+            --border: #1f2a2d;
+            --text: #c0ccc0;
+            --text-bright: #e0ece0;
+            --accent: #7eb8a0;
+            --accent-glow: #a0d8c0;
+            --silver: #9aada0;
+            --green: #5a9070;
+            --warn: #c0a060;
+            --error: #c06060;
+            --card-meta: #6b7280;
+            --card-memory: #a78bfa;
+            --card-retrieval: #f59e0b;
+            --card-generation: #60a5fa;
+            --font-mono: 'Courier New', 'SF Mono', 'Fira Code', monospace;
+        }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--ff);
-      font-size: 14px;
-      line-height: 1.6;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-mono);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
-    .terminal {
-      flex: 1;
-      padding: 1.5rem;
-      max-width: 900px;
-      margin: 0 auto;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-    }
+        /* HEADER BAR */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .header .icon {
+            font-size: 22px;
+        }
+        .header .title {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .header .badge {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            background: var(--border);
+            color: var(--silver);
+            letter-spacing: 0.5px;
+        }
+        .header .badge.online {
+            background: #1a3020;
+            color: var(--accent-glow);
+            border: 1px solid var(--green);
+        }
+        .header .badge.learning {
+            background: #1a2a30;
+            color: #60a5fa;
+            border: 1px solid #3a6a8a;
+        }
+        .header .spacer {
+            flex: 1;
+        }
+        .header button {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--silver);
+            padding: 5px 12px;
+            cursor: pointer;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            border-radius: 3px;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+        }
+        .header button:hover {
+            border-color: var(--accent);
+            color: var(--accent-glow);
+        }
+        .header button.active {
+            background: #1a2a24;
+            border-color: var(--accent);
+            color: var(--accent-glow);
+        }
 
-    .output {
-      flex: 1;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-      padding-bottom: 1rem;
-    }
+        /* MAIN LAYOUT */
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
 
-    .output-line { margin-bottom: 0.15rem; }
-    .line-header  { color: var(--accent); }
-    .line-success { color: var(--bright); }
-    .line-warn    { color: var(--warn); }
-    .line-error   { color: var(--error); }
-    .line-dim     { color: var(--dim); }
-    .line-result  { color: var(--text); }
-    .line-vote-yes { color: var(--bright); }
-    .line-vote-no  { color: var(--dim); }
+        /* OUTPUT PANEL */
+        .output-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .output-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            font-size: 12px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .output-area .line {
+            margin-bottom: 2px;
+        }
+        .output-area .line.system {
+            color: var(--card-meta);
+        }
+        .output-area .line.vote {
+            color: var(--silver);
+        }
+        .output-area .line.exec {
+            color: var(--accent);
+        }
+        .output-area .line.result {
+            color: var(--text-bright);
+        }
+        .output-area .line.error {
+            color: var(--error);
+        }
+        .output-area .line.warn {
+            color: var(--warn);
+        }
+        .output-area .line.user {
+            color: var(--accent-glow);
+        }
+        .output-area .separator {
+            border-top: 1px dashed var(--border);
+            margin: 8px 0;
+        }
+        .output-area img {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            margin: 8px 0;
+            display: block;
+        }
 
-    .input-line {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      border-top: 1px solid rgba(138,184,138,0.15);
-      padding-top: 0.75rem;
-    }
+        /* SIDE PANEL */
+        .side-panel {
+            width: 340px;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow-y: auto;
+            font-size: 10px;
+        }
+        .side-section {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .side-section h3 {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--silver);
+            margin-bottom: 8px;
+        }
+        .card-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 0;
+            font-size: 10px;
+        }
+        .card-status .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .card-status .dot.ready { background: var(--accent); }
+        .card-status .dot.waiting { background: var(--card-meta); }
+        .card-status .card-name { flex: 1; }
+        .card-status .card-weight {
+            color: var(--card-meta);
+            font-size: 9px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+        }
+        .stat-row .label { color: var(--card-meta); }
+        .stat-row .value { color: var(--text-bright); }
 
-    .prompt { color: var(--accent); white-space: nowrap; font-weight: 600; }
-    .mode-indicator { color: var(--dim); font-size: 0.75rem; white-space: nowrap; }
+        /* INPUT BAR */
+        .input-bar {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 10px 16px;
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .input-bar input {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-bright);
+            padding: 10px 14px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            border-radius: 3px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-bar input:focus {
+            border-color: var(--accent);
+        }
+        .input-bar input::placeholder {
+            color: #3a4a40;
+        }
+        .input-bar button {
+            background: var(--accent);
+            border: none;
+            color: var(--bg);
+            padding: 10px 20px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 3px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        .input-bar button:hover {
+            background: var(--accent-glow);
+            box-shadow: 0 0 12px rgba(126, 184, 160, 0.3);
+        }
+        .input-bar button:disabled {
+            background: var(--border);
+            color: var(--card-meta);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
 
-    #terminalInput {
-      flex: 1;
-      background: transparent;
-      border: none;
-      color: var(--text);
-      font-family: var(--ff);
-      font-size: 14px;
-      outline: none;
-      caret-color: var(--accent);
-    }
+        /* SCROLLBAR */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
 
-    #terminalInput::placeholder { color: var(--dim); opacity: 0.4; }
+        /* PULSE ANIMATION */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulsing {
+            animation: pulse 1.5s infinite;
+        }
 
-    .status-bar {
-      display: flex;
-      justify-content: space-between;
-      padding: 0.5rem 1.5rem;
-      border-top: 1px solid rgba(138,184,138,0.1);
-      font-size: 0.7rem;
-      color: var(--dim);
-    }
-
-    .status-left  { display: flex; gap: 1.5rem; }
-    .status-right { text-align: right; }
-
-    .blink { animation: blink 1s step-end infinite; }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50%      { opacity: 0; }
-    }
-
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: rgba(138,184,138,0.2); border-radius: 3px; }
-  </style>
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .side-panel {
+                display: none;
+            }
+        }
+    </style>
 </head>
 <body>
 
-<div class="terminal">
-  <div class="output" id="output"></div>
-  <div class="input-line">
-    <span class="prompt">🏹 ARTEMIS</span>
-    <span class="mode-indicator" id="modeLabel">[AUTO]</span>
-    <span class="prompt">></span>
-    <input type="text" id="terminalInput" placeholder="Enter command or natural language..." autofocus />
-  </div>
-</div>
+    <!-- HEADER -->
+    <div class="header">
+        <span class="icon">🏹</span>
+        <span class="title">Artemis Terminal</span>
+        <span class="badge online" id="statusBadge">● ONLINE</span>
+        <span class="badge learning" id="learningBadge" style="display:none;">◆ LEARNING</span>
+        <span class="spacer"></span>
+        <button id="btnAuto" class="active" onclick="setMode('AUTO')">AUTO</button>
+        <button id="btnManual" onclick="setMode('MANUAL')">MANUAL</button>
+        <button onclick="showHelp()">HELP</button>
+        <button onclick="clearTerminal()">CLEAR</button>
+        <button onclick="showStatus()">STATUS</button>
+    </div>
 
-<div class="status-bar">
-  <div class="status-left">
-    <span id="dbStatus">DB: checking...</span>
-    <span id="sessionStatus">SESSION: --</span>
-    <span id="agentStatus">AGENT: loading...</span>
-  </div>
-  <div class="status-right">
-    <span id="telosStatus">TELOS: idle</span>
-    <span class="blink">█</span>
-  </div>
-</div>
+    <!-- MAIN -->
+    <div class="main">
+        <!-- OUTPUT -->
+        <div class="output-panel">
+            <div class="output-area" id="output">
+                <div class="line system">╔══════════════════════════════════════════╗</div>
+                <div class="line system">║   ARTEMIS TERMINAL — EaldfornAI v2.0    ║</div>
+                <div class="line system">║   Card Router Engine                    ║</div>
+                <div class="line system">║   Monastery Phase-Lock: ACTIVE          ║</div>
+                <div class="line system">╚══════════════════════════════════════════╝</div>
+                <div class="line system"></div>
+                <div class="line system">[SYS] Initializing Artemis Agent...</div>
+                <div class="line system" id="initLine">[SYS] Loading card registry...</div>
+                <div class="line system"></div>
+                <div class="line system">Type <span style="color:#a0d8c0">HELP</span> for commands. Type anything else to route through the card engine.</div>
+                <div class="line system">──────────────────────────────────────────</div>
+            </div>
+        </div>
 
-<script src="agent.js"></script>
-<script>
-  // ── SUPABASE CONFIG ───────────────────────────────────────
-  const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-  const SUPABASE_KEY = 'YOUR_PUBLISHABLE_KEY';
-  window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  const sb = window.supabase;
+        <!-- SIDE PANEL -->
+        <div class="side-panel" id="sidePanel">
+            <div class="side-section">
+                <h3>🃏 Card Deck</h3>
+                <div id="cardList">
+                    <div class="card-status"><span class="dot waiting"></span><span class="card-name">Loading...</span></div>
+                </div>
+            </div>
+            <div class="side-section">
+                <h3>📊 Decision Stats</h3>
+                <div id="decisionStats">
+                    <div class="stat-row"><span class="label">Decisions</span><span class="value">0</span></div>
+                    <div class="stat-row"><span class="label">Session</span><span class="value" id="sidDisplay">—</span></div>
+                    <div class="stat-row"><span class="label">Classifier</span><span class="value" id="classifierDisplay">—</span></div>
+                    <div class="stat-row"><span class="label">ML Ready</span><span class="value" id="mlDisplay">—</span></div>
+                </div>
+            </div>
+            <div class="side-section">
+                <h3>📋 Last Vote</h3>
+                <div id="lastVote" style="color: var(--card-meta);">No votes yet.</div>
+            </div>
+            <div class="side-section">
+                <h3>⚡ Recent Actions</h3>
+                <div id="recentActions" style="color: var(--card-meta); max-height: 200px; overflow-y: auto;">
+                    No actions yet.
+                </div>
+            </div>
+        </div>
+    </div>
 
-  // ── STATE ─────────────────────────────────────────────────
-  const state = {
-    mode: 'AUTO',  // AUTO | MANUAL | TRACK | HUNT | QUERY | ACT
-    sessionToken: null,
-    sessionId: null,
-    dbConnected: false,
-    agentReady: false,
-    classifierLoaded: false
-  };
+    <!-- INPUT -->
+    <div class="input-bar">
+        <span style="color:var(--accent);font-weight:bold;">⟩</span>
+        <input 
+            type="text" 
+            id="userInput" 
+            placeholder="Speak to Artemis..." 
+            autocomplete="off"
+            onkeydown="if(event.key==='Enter')sendCommand()"
+        >
+        <button id="btnSend" onclick="sendCommand()">SEND</button>
+    </div>
 
-  // ── DOM ───────────────────────────────────────────────────
-  const outputEl      = document.getElementById('output');
-  const inputEl       = document.getElementById('terminalInput');
-  const modeLabel     = document.getElementById('modeLabel');
-  const dbStatus      = document.getElementById('dbStatus');
-  const sessionStatus = document.getElementById('sessionStatus');
-  const agentStatus   = document.getElementById('agentStatus');
-  const telosStatus   = document.getElementById('telosStatus');
-
-  // ── OUTPUT HELPERS ────────────────────────────────────────
-  function print(text, cls = 'line-result') {
-    const div = document.createElement('div');
-    div.className = `output-line ${cls}`;
-    div.textContent = text;
-    outputEl.appendChild(div);
-    outputEl.scrollTop = outputEl.scrollHeight;
-  }
-
-  function printHeader(text) {
-    print('╭──────────────────────────────────────────', 'line-dim');
-    print(`│  ${text}`, 'line-header');
-    print('╰──────────────────────────────────────────', 'line-dim');
-  }
-
-  function printResult(rows, cols) {
-    if (!rows || rows.length === 0) {
-      print('  (no results)', 'line-dim');
-      return;
-    }
-    const keys = cols || Object.keys(rows[0]);
-    const header = keys.map(k => String(k).padEnd(20).slice(0, 20)).join(' │ ');
-    print(`  ${header}`, 'line-header');
-    print(`  ${'─'.repeat(header.length)}`, 'line-dim');
-    for (const row of rows) {
-      const vals = keys.map(k => String(row[k] || '').padEnd(20).slice(0, 20)).join(' │ ');
-      print(`  ${vals}`, 'line-result');
-    }
-    print(`  ${rows.length} row(s)`, 'line-dim');
-  }
-
-  // ── SESSION ───────────────────────────────────────────────
-  async function initSession() {
-    let token = localStorage.getItem('apollo_session_token');
-    if (!token) {
-      token = crypto.randomUUID();
-      localStorage.setItem('apollo_session_token', token);
-    }
-    state.sessionToken = token;
-
-    try {
-      const { data } = await sb.from('sessions')
-        .select('id')
-        .eq('session_token', token)
-        .single();
-
-      if (data) {
-        state.sessionId = data.id;
-        state.dbConnected = true;
-        await sb.from('sessions').update({ last_active: new Date().toISOString() }).eq('session_token', token);
-      } else {
-        const { data: newSess } = await sb.from('sessions')
-          .insert({ session_token: token })
-          .select('id')
-          .single();
-        state.sessionId = newSess?.id || null;
-        state.dbConnected = true;
-      }
-
-      sessionStatus.textContent = `SESSION: ${state.sessionId ? 'linked' : 'local'}`;
-      dbStatus.textContent = 'DB: gaia';
-    } catch (e) {
-      state.dbConnected = false;
-      dbStatus.textContent = 'DB: offline';
-      sessionStatus.textContent = 'SESSION: local';
-    }
-  }
-
-  // ── AGENT INIT ────────────────────────────────────────────
-  async function initAgent() {
-    agentStatus.textContent = 'AGENT: loading...';
+    <!-- SCRIPTS -->
+    <!-- Card Registry & Modules -->
+    <script src="cards/config.js"></script>
+    <script src="cards/decisionLog.js"></script>
+    <script src="cards/gaiaRecall.js"></script>
+    <script src="cards/pollinationsText.js"></script>
+    <script src="cards/pollinationsImage.js"></script>
+    <script src="cards/browserHunt.js"></script>
+    <script src="cards/compress.js"></script>
     
-    try {
-      await window.ArtemisAgent.loadClassifier();
-      state.classifierLoaded = true;
-      state.agentReady = true;
-      agentStatus.textContent = 'AGENT: ready (ML)';
-    } catch (e) {
-      state.agentReady = true;
-      agentStatus.textContent = 'AGENT: ready (heuristic)';
-    }
-  }
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Transformers.js (optional, for ML classifier) -->
+    <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2"></script>
+    
+    <!-- Artemis Agent Engine -->
+    <script src="agent.js"></script>
 
-  // ── COMMAND EXECUTION ─────────────────────────────────────
-  async function executeCommand(input) {
-    const raw = input.trim();
-    if (!raw) return;
+    <script>
+        // ============================================
+        // TERMINAL CONTROLLER
+        // ============================================
+        let currentMode = 'AUTO'; // AUTO | MANUAL
+        let isProcessing = false;
+        let commandHistory = [];
+        let historyIndex = -1;
 
-    print(`🏹 > ${raw}`, 'line-dim');
-    const upper = raw.toUpperCase();
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        async function boot() {
+            printSystem('Initializing Artemis EaldfornAI Router...');
+            
+            const success = await ArtemisAgent.init({
+                supabaseUrl: 'https://nbdvavzqvxrlxhsbrluz.supabase.co',
+                supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZHZhdnpxdnhyeGhzYnJsdXoiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc0Nzk5MjUzMCwiZXhwIjoyMDYzNTY4NTMwfQ.fOe0L7hUwKeIGmm7s7uSJmkhSWJqMpFZdOUyTEhdEII'
+            });
 
-    // ── BUILT-IN COMMANDS ────────────────────────────────────
-    if (upper === 'HELP') {
-      printHeader('ARTEMIS COMMANDS');
-      print('  AUTO mode (default):', 'line-header');
-      print('    Any natural language → Artemis classifies and executes matching tools', 'line-result');
-      print('  MANUAL commands:', 'line-header');
-      print('    TRACK memory [keyword]  — Search conversations', 'line-result');
-      print('    HUNT <pattern>          — Search across repos', 'line-result');
-      print('    COMPRESS                — Generate memory snapshot', 'line-result');
-      print('    STATUS                  — Show current state', 'line-result');
-      print('    MODE <auto|manual>      — Switch mode', 'line-result');
-      print('    CLEAR                   — Clear terminal', 'line-result');
-      print('    CARDS                   — List all tool cards', 'line-result');
-      print('    HELP                    — This output', 'line-result');
-      return;
-    }
+            if (success) {
+                const status = ArtemisAgent.getStatus();
+                document.getElementById('initLine').textContent = 
+                    `[SYS] ✓ Initialized. ${status.cardsLoaded} cards loaded. Session: ${status.sessionId.substring(0, 12)}...`;
+                document.getElementById('statusBadge').textContent = '● ONLINE';
+                document.getElementById('statusBadge').className = 'badge online';
+                if (status.mlReady) {
+                    document.getElementById('learningBadge').style.display = 'inline';
+                }
+                updateSidePanel();
+            } else {
+                document.getElementById('initLine').textContent = '[SYS] ✗ Initialization failed. Check console.';
+                document.getElementById('statusBadge').textContent = '● OFFLINE';
+                document.getElementById('statusBadge').className = 'badge';
+            }
 
-    if (upper === 'STATUS') {
-      printHeader('ARTEMIS STATUS');
-      print(`  Mode:        ${state.mode}`, 'line-result');
-      print(`  Session:     ${state.sessionToken ? 'linked' : 'none'}`, 'line-result');
-      print(`  DB (Gaia):   ${state.dbConnected ? 'connected' : 'offline'}`, 'line-result');
-      print(`  Agent:       ${state.classifierLoaded ? 'ML model' : 'heuristic'}`, 'line-result');
-      print(`  Memory:      ${localStorage.getItem('artemis_compressed_memory') || 'none'}`, 'line-dim');
-      return;
-    }
-
-    if (upper === 'CLEAR') {
-      outputEl.innerHTML = '';
-      return;
-    }
-
-    if (upper === 'CARDS') {
-      printHeader('TOOL CARDS');
-      for (const card of window.ArtemisAgent.TOOL_CARDS) {
-        print(`  ${card.icon} ${card.name}: ${card.description}`, 'line-result');
-      }
-      return;
-    }
-
-    if (upper.startsWith('MODE ')) {
-      const mode = raw.slice(5).toUpperCase();
-      if (mode === 'AUTO' || mode === 'MANUAL') {
-        state.mode = mode;
-        modeLabel.textContent = `[${mode}]`;
-        print(`  Mode set to ${mode}.`, 'line-success');
-      } else {
-        print('  Invalid mode. Use AUTO or MANUAL.', 'line-warn');
-      }
-      return;
-    }
-
-    // ── MANUAL MODE COMMANDS ─────────────────────────────────
-    if (state.mode === 'MANUAL') {
-      if (upper.startsWith('TRACK MEMORY')) {
-        const query = raw.slice('TRACK MEMORY'.length).trim();
-        printHeader(`TRACK MEMORY: ${query || 'recent'}`);
-        const result = await window.ArtemisAgent.tools.trackMemory(query);
-        if (result.error) {
-          print(`  ${result.error}`, 'line-error');
-        } else if (result.text) {
-          print(`  ${result.text}`, 'line-success');
+            document.getElementById('userInput').focus();
         }
-        if (result.data) printResult(result.data, ['olympian', 'role', 'content']);
-        return;
-      }
 
-      if (upper.startsWith('HUNT ')) {
-        const pattern = raw.slice(5);
-        printHeader(`HUNT: "${pattern}"`);
-        const result = await window.ArtemisAgent.tools.hunt(pattern);
-        if (result.error) {
-          print(`  ${result.error}`, 'line-error');
-        } else {
-          print(`  ${result.text}`, 'line-success');
+        // ============================================
+        // COMMAND HANDLING
+        // ============================================
+        async function sendCommand() {
+            if (isProcessing) return;
+
+            const inputEl = document.getElementById('userInput');
+            const input = inputEl.value.trim();
+            
+            if (!input) return;
+
+            // Add to history
+            commandHistory.push(input);
+            historyIndex = commandHistory.length;
+            
+            // Clear input
+            inputEl.value = '';
+
+            // Print user command
+            printUser(input);
+
+            // Check for terminal commands
+            if (handleTerminalCommand(input)) {
+                return;
+            }
+
+            // Route through Artemis Agent
+            isProcessing = true;
+            document.getElementById('btnSend').disabled = true;
+            document.getElementById('btnSend').textContent = '...';
+
+            // If MANUAL mode, show card vote before executing
+            if (currentMode === 'MANUAL') {
+                printSystem('[MANUAL] Would route through card engine. Type APPROVE to execute or REJECT to skip.');
+                // In manual mode, we wait for APPROVE
+                // For now, we'll auto-approve after showing votes
+                // (Full manual approval flow would need more state management)
+            }
+
+            try {
+                const startTime = performance.now();
+                
+                // Show classification in terminal
+                printSeparator();
+                printSystem('🃏 Classifying input...');
+                
+                const result = await ArtemisAgent.processInput(input);
+                
+                const elapsed = (performance.now() - startTime).toFixed(0);
+                
+                // Show what cards were played
+                if (result.metadata && result.metadata.cardsPlayed) {
+                    const cardNames = result.metadata.cardsPlayed.join(', ');
+                    printSystem(`✓ Cards played: ${cardNames} (${elapsed}ms)`);
+                }
+
+                // Show result
+                printSeparator();
+                if (result.text) {
+                    printResult(result.text);
+                }
+                if (result.imageUrl) {
+                    printImage(result.imageUrl);
+                }
+                printSeparator();
+
+            } catch (err) {
+                printError('Engine error: ' + err.message);
+                console.error(err);
+            }
+
+            isProcessing = false;
+            document.getElementById('btnSend').disabled = false;
+            document.getElementById('btnSend').textContent = 'SEND';
+            
+            // Update side panel
+            updateSidePanel();
+            
+            // Scroll to bottom
+            scrollToBottom();
         }
-        return;
-      }
 
-      if (upper === 'COMPRESS') {
-        printHeader('COMPRESSING MEMORY');
-        const result = await window.ArtemisAgent.tools.compress();
-        if (result.text) print(`  ${result.text}`, 'line-success');
-        return;
-      }
+        function handleTerminalCommand(input) {
+            const upper = input.toUpperCase().trim();
 
-      print('  Unknown manual command. Type HELP.', 'line-warn');
-      return;
-    }
-
-    // ── AUTO MODE — Run the card engine ──────────────────────
-    if (state.mode === 'AUTO') {
-      printHeader('ARTEMIS PROCESSING...');
-      print('  Classifying against tool cards...', 'line-dim');
-      
-      const result = await window.ArtemisAgent.process(raw, {
-        verbose: true,
-        autoCompress: false,
-        sessionId: state.sessionId
-      });
-
-      // Show card votes
-      print('');
-      for (const vote of result.cardVotes) {
-        const icon = window.ArtemisAgent.TOOL_CARDS.find(c => c.name === vote.card)?.icon || '•';
-        const pct = Math.round(vote.score * 100);
-        if (vote.match) {
-          print(`  ${icon} ${vote.card}: YES (${pct}%)`, 'line-vote-yes');
-        } else {
-          const reason = vote.reason ? ` — ${vote.reason}` : '';
-          print(`  ${icon} ${vote.card}: NO (${pct}%)${reason}`, 'line-vote-no');
+            switch (upper) {
+                case 'HELP':
+                    showHelp();
+                    return true;
+                case 'STATUS':
+                    showStatus();
+                    return true;
+                case 'CLEAR':
+                    clearTerminal();
+                    return true;
+                case 'CARDS':
+                    showCards();
+                    return true;
+                case 'HISTORY':
+                    showHistory();
+                    return true;
+                case 'WEIGHTS':
+                    showWeights();
+                    return true;
+                case 'APPROVE':
+                    printSystem('[MANUAL] Approved. Executing last voted cards...');
+                    // In full implementation, this would execute the pending cards
+                    return true;
+                case 'REJECT':
+                    printSystem('[MANUAL] Rejected. Cards discarded.');
+                    return true;
+                default:
+                    return false;
+            }
         }
-      }
 
-      // Show results
-      print('');
-      if (result.results.length === 0) {
-        print('  No tools matched. Try rephrasing.', 'line-warn');
-      } else {
-        for (const r of result.results) {
-          printHeader(`${r.icon} ${r.card}`);
-          if (r.output.error) {
-            print(`  Error: ${r.output.error}`, 'line-error');
-          } else if (r.output.text) {
-            print(`  ${r.output.text}`, 'line-success');
-          }
-          if (r.output.data) {
-            printResult(r.output.data, ['olympian', 'role', 'content']);
-          }
-          if (r.output.matches) {
-            print(`  Matches: ${r.output.matches.join(', ')}`, 'line-success');
-          }
+        // ============================================
+        // TERMINAL COMMANDS
+        // ============================================
+        function showHelp() {
+            printSystem('');
+            printSystem('╔══════════════════════════════════════════╗');
+            printSystem('║   ARTEMIS TERMINAL — COMMANDS           ║');
+            printSystem('╠══════════════════════════════════════════╣');
+            printSystem('║  HELP     — Show this message           ║');
+            printSystem('║  STATUS   — Show system status          ║');
+            printSystem('║  CARDS    — List all cards in deck      ║');
+            printSystem('║  WEIGHTS  — Show learned card weights   ║');
+            printSystem('║  HISTORY  — Show recent decisions       ║');
+            printSystem('║  CLEAR    — Clear terminal              ║');
+            printSystem('║  AUTO     — Switch to auto mode         ║');
+            printSystem('║  MANUAL   — Switch to manual mode       ║');
+            printSystem('║  Anything else → Route to card engine   ║');
+            printSystem('╚══════════════════════════════════════════╝');
+            printSystem('');
         }
-      }
 
-      // Auto-compress after processing
-      print('');
-      print('  Auto-compressing memory...', 'line-dim');
-      const compressResult = await window.ArtemisAgent.tools.compress();
-      if (compressResult.text) {
-        print(`  ${compressResult.text}`, 'line-dim');
-      }
-      
-      return;
-    }
-  }
+        function showStatus() {
+            const status = ArtemisAgent.getStatus();
+            printSystem('');
+            printSystem('┌─── SYSTEM STATUS ───────────────────────┐');
+            printSystem(`│  Initialized:    ${String(status.initialized).padEnd(27)}│`);
+            printSystem(`│  Cards Loaded:   ${String(status.cardsLoaded).padEnd(27)}│`);
+            printSystem(`│  Decisions:      ${String(status.decisionCount).padEnd(27)}│`);
+            printSystem(`│  Session:        ${(status.sessionId || '—').substring(0, 20).padEnd(27)}│`);
+            printSystem(`│  Classifier:     ${status.classifierMode.padEnd(27)}│`);
+            printSystem(`│  ML Ready:       ${String(status.mlReady).padEnd(27)}│`);
+            printSystem(`│  Mode:           ${currentMode.padEnd(27)}│`);
+            printSystem('└──────────────────────────────────────────┘');
+            printSystem('');
+        }
 
-  // ── INIT ──────────────────────────────────────────────────
-  async function init() {
-    outputEl.innerHTML = '';
-    printHeader('ARTEMIS TERMINAL');
-    print('  EaldfornAI · Personal Agent · Card Engine', 'line-dim');
-    print('  Type HELP for commands. Default mode: AUTO', 'line-dim');
-    print('');
+        function showCards() {
+            const cards = ArtemisAgent.getCardRegistry();
+            printSystem('');
+            printSystem('┌─── CARD DECK ───────────────────────────┐');
+            cards.forEach(c => {
+                const icon = c.icon || '🃏';
+                const name = c.name.padEnd(22);
+                const cat = (c.category || '—').padEnd(12);
+                const weight = c.weight ? c.weight.toFixed(2) : '0.50';
+                printSystem(`│ ${icon} ${name} ${cat} w:${weight} │`);
+            });
+            printSystem('└──────────────────────────────────────────┘');
+            printSystem('');
+        }
 
-    await initSession();
-    await initAgent();
+        function showWeights() {
+            const cards = ArtemisAgent.getCardRegistry();
+            printSystem('');
+            printSystem('┌─── LEARNED WEIGHTS ─────────────────────┐');
+            cards.forEach(c => {
+                const name = c.name.padEnd(22);
+                const plays = String(c.playCount || 0).padStart(4);
+                const successes = String(c.successCount || 0).padStart(4);
+                const weight = c.weight ? c.weight.toFixed(3) : '0.500';
+                printSystem(`│ ${name} plays:${plays} ✓:${successes} w:${weight} │`);
+            });
+            printSystem('└──────────────────────────────────────────┘');
+            printSystem('');
+        }
 
-    if (state.dbConnected) {
-      print('  GaiaDB connected. Session linked.', 'line-success');
-    } else {
-      print('  Running in offline mode.', 'line-warn');
-    }
+        function showHistory() {
+            try {
+                const history = JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]');
+                printSystem('');
+                printSystem('┌─── RECENT ACTIONS ──────────────────────┐');
+                if (history.length === 0) {
+                    printSystem('│  No actions recorded yet.               │');
+                } else {
+                    history.slice(-10).forEach((action, i) => {
+                        const time = new Date(action.timestamp).toLocaleTimeString();
+                        const input = (action.input || '').substring(0, 30).padEnd(30);
+                        printSystem(`│ ${time} ${input} │`);
+                    });
+                }
+                printSystem('└──────────────────────────────────────────┘');
+                printSystem('');
+            } catch (err) {
+                printError('Failed to read history: ' + err.message);
+            }
+        }
 
-    print(`  Agent: ${state.classifierLoaded ? 'ML classifier ready' : 'Heuristic mode'}`, 'line-success');
-    print('');
-    print('  Ready. Speak naturally or use MANUAL commands.', 'line-success');
-    print('');
+        function clearTerminal() {
+            document.getElementById('output').innerHTML = '';
+            printSystem('Terminal cleared. Artemis awaits.');
+        }
 
-    telosStatus.textContent = 'TELOS: idle';
-    inputEl.focus();
-  }
+        // ============================================
+        // MODE SWITCHING
+        // ============================================
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('btnAuto').className = mode === 'AUTO' ? 'active' : '';
+            document.getElementById('btnManual').className = mode === 'MANUAL' ? 'active' : '';
+            printSystem(`[MODE] Switched to ${mode} mode.`);
+        }
 
-  // ── EVENT LISTENERS ───────────────────────────────────────
-  inputEl.addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter') {
-      const cmd = inputEl.value;
-      inputEl.value = '';
-      inputEl.disabled = true;
-      
-      await executeCommand(cmd);
-      
-      inputEl.disabled = false;
-      inputEl.focus();
-    }
-  });
+        // ============================================
+        // OUTPUT HELPERS
+        // ============================================
+        function printSystem(text) {
+            appendLine(text, 'system');
+        }
 
-  document.addEventListener('click', () => inputEl.focus());
+        function printUser(text) {
+            appendLine('⟩ ' + text, 'user');
+        }
 
-  // ── START ─────────────────────────────────────────────────
-  init();
-</script>
+        function printResult(text) {
+            // Split multi-line results
+            const lines = text.split('\n');
+            lines.forEach(line => {
+                appendLine(line, 'result');
+            });
+        }
 
+        function printImage(url) {
+            const output = document.getElementById('output');
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Generated Image';
+            img.onerror = () => {
+                const errLine = document.createElement('div');
+                errLine.className = 'line error';
+                errLine.textContent = '[IMG] Failed to load image. URL may be invalid.';
+                output.appendChild(errLine);
+            };
+            output.appendChild(img);
+            const caption = document.createElement('div');
+            caption.className = 'line system';
+            caption.textContent = '[IMG] ' + url.substring(0, 80) + '...';
+            output.appendChild(caption);
+        }
+
+        function printError(text) {
+            appendLine('[ERR] ' + text, 'error');
+        }
+
+        function printSeparator() {
+            appendLine('──────────────────────────────────────────', 'system');
+        }
+
+        function appendLine(text, className) {
+            const output = document.getElementById('output');
+            const line = document.createElement('div');
+            line.className = 'line ' + (className || '');
+            line.textContent = text;
+            output.appendChild(line);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            const output = document.getElementById('output');
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // ============================================
+        // SIDE PANEL UPDATES
+        // ============================================
+        function updateSidePanel() {
+            const status = ArtemisAgent.getStatus();
+            
+            // Card list
+            const cards = ArtemisAgent.getCardRegistry();
+            const cardListEl = document.getElementById('cardList');
+            cardListEl.innerHTML = cards.map(c => {
+                const dotClass = c.weight > 0.3 ? 'ready' : 'waiting';
+                const catColor = {
+                    'meta': 'var(--card-meta)',
+                    'memory': 'var(--card-memory)',
+                    'retrieval': 'var(--card-retrieval)',
+                    'generation': 'var(--card-generation)'
+                }[c.category] || 'var(--card-meta)';
+                return `
+                    <div class="card-status">
+                        <span class="dot ${dotClass}" style="background:${catColor};"></span>
+                        <span class="card-name">${c.icon || ''} ${c.name}</span>
+                        <span class="card-weight">${(c.weight || 0).toFixed(2)}</span>
+                    </div>
+                `;
+            }).join('');
+
+            // Decision stats
+            document.getElementById('decisionStats').innerHTML = `
+                <div class="stat-row"><span class="label">Decisions</span><span class="value">${status.decisionCount}</span></div>
+                <div class="stat-row"><span class="label">Session</span><span class="value">${(status.sessionId || '—').substring(0, 12)}...</span></div>
+                <div class="stat-row"><span class="label">Classifier</span><span class="value">${status.classifierMode}</span></div>
+                <div class="stat-row"><span class="label">ML Ready</span><span class="value">${status.mlReady ? '✓' : '✗'}</span></div>
+            `;
+
+            // Recent actions
+            try {
+                const history = JSON.parse(localStorage.getItem('artemis_recent_actions') || '[]');
+                const recentEl = document.getElementById('recentActions');
+                if (history.length === 0) {
+                    recentEl.innerHTML = '<span style="color:var(--card-meta);">No actions yet.</span>';
+                } else {
+                    recentEl.innerHTML = history.slice(-8).reverse().map(a => {
+                        const time = new Date(a.timestamp).toLocaleTimeString();
+                        const input = (a.input || '').substring(0, 40);
+                        return `<div style="margin-bottom:4px;"><span style="color:var(--card-meta);">${time}</span> ${input}</div>`;
+                    }).join('');
+                }
+            } catch (err) {
+                // silent
+            }
+        }
+
+        // ============================================
+        // KEYBOARD HANDLING
+        // ============================================
+        document.addEventListener('keydown', function(e) {
+            // Up arrow: previous command
+            if (e.key === 'ArrowUp' && document.activeElement === document.getElementById('userInput')) {
+                e.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    document.getElementById('userInput').value = commandHistory[historyIndex] || '';
+                }
+            }
+            // Down arrow: next command
+            if (e.key === 'ArrowDown' && document.activeElement === document.getElementById('userInput')) {
+                e.preventDefault();
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    document.getElementById('userInput').value = commandHistory[historyIndex] || '';
+                } else {
+                    historyIndex = commandHistory.length;
+                    document.getElementById('userInput').value = '';
+                }
+            }
+        });
+
+        // ============================================
+        // BOOT
+        // ============================================
+        boot().catch(err => {
+            printError('Boot failed: ' + err.message);
+            console.error(err);
+        });
+    </script>
 </body>
 </html>

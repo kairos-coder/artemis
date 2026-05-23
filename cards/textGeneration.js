@@ -6,12 +6,20 @@ var textGeneration = {
     _pollinationsConsecutiveFails: 0,
     
     // Tier 2 state
-    _modelEngine: null,
-    _modelLoaded: false,
-    _modelLoading: false,
-    _modelLoadProgress: 0,
-    _modelName: 'SmolLM2-135M-Instruct-q4f16_1-MLC',
-    _modelLabel: 'SmolLM2 135M',
+_modelEngine: null,
+_modelLoaded: false,
+_modelLoading: false,
+_modelLoadProgress: 0,
+_modelName: 'SmolLM2-135M-Instruct-q4f16_1-MLC-1k',
+_modelLabel: 'SmolLM2 135M',
+
+// Tiered models — starts with smallest, cascades up
+_modelTiers: [
+    { name: 'SmolLM2-135M-Instruct-q4f16_1-MLC-1k', label: 'SmolLM2 135M', size: '~220 MB' },
+    { name: 'SmolLM2-360M-Instruct-q4f16_1-MLC-1k', label: 'SmolLM2 360M', size: '~376 MB' },
+    { name: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC-1k', label: 'Qwen2.5 0.5B', size: '~945 MB' }
+],
+_currentTier: 0,
     
     _systemPrompt: [
         'You are Artemis, an AI in a terminal. You can issue CLI commands.',

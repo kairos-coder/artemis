@@ -75,6 +75,15 @@
             background: var(--accent);
             box-shadow: 0 0 6px rgba(126,184,160,0.5);
         }
+        .header .tier-badge {
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 8px;
+            background: var(--border);
+            color: var(--silver);
+            font-family: var(--font-mono);
+            letter-spacing: 0.5px;
+        }
         .chat-area {
             flex: 1;
             overflow-y: auto;
@@ -141,7 +150,7 @@
             padding-top: 6px;
             border-top: 1px solid var(--border);
         }
-        .bubble .card-tag {
+        .bubble .tier-tag {
             font-size: 9px;
             color: var(--muted);
             font-family: var(--font-mono);
@@ -251,6 +260,7 @@
             <span class="subtitle">Goddess of the Hunt · EaldfornAI</span>
         </div>
         <span class="spacer"></span>
+        <span class="tier-badge" id="tierBadge" title="Current text tier">● TIER</span>
         <span class="status-dot" id="statusDot" title="Agent Status"></span>
         <a href="terminal.html" class="link">◈ TERMINAL</a>
         <a href="../ealdforn-studios/index.html" class="link">◈ NEXUS</a>
@@ -261,7 +271,7 @@
             <div class="big-icon">🏹🌙</div>
             <h2>I am Artemis</h2>
             <p>Goddess of the Hunt. Keeper of the silver bow. I route your words through my deck of cards — memory, generation, retrieval — and return what you seek.</p>
-            <p style="margin-top:12px;font-size:12px;color:var(--muted);">Speak plainly. I will find the right arrow.</p>
+            <p style="margin-top:12px;font-size:12px;color:var(--muted);">Text powers: Pollinations → Browser Model → Scripted. Speak plainly.</p>
         </div>
     </div>
 
@@ -280,11 +290,11 @@
         <button id="btnSend" onclick="sendMessage()">SEND</button>
     </div>
 
-    <!-- SCRIPTS — Single source of truth load order -->
+    <!-- SCRIPTS -->
     <script src="cards/config.js"></script>
     <script src="cards/decisionLog.js"></script>
     <script src="cards/gaiaRecall.js"></script>
-    <script src="cards/pollinationsText.js"></script>
+    <script src="cards/textGeneration.js"></script>
     <script src="cards/pollinationsImage.js"></script>
     <script src="cards/browserHunt.js"></script>
     <script src="cards/compress.js"></script>
@@ -292,32 +302,34 @@
     <script src="agent.js"></script>
 
     <script>
-        let isProcessing = false;
-        let messageCount = 0;
-        let conversationHistory = [];
+        var isProcessing = false;
+        var messageCount = 0;
+        var conversationHistory = [];
+        var currentTier = '—';
 
         async function boot() {
             console.log('[Artemis Chat] Booting...');
-            const success = await ArtemisAgent.init();
+            var success = await ArtemisAgent.init();
 
             if (success) {
-                const status = ArtemisAgent.getStatus();
+                var status = ArtemisAgent.getStatus();
                 document.getElementById('statusDot').title =
                     'Online · ' + status.cardsLoaded + ' cards · ' + status.classifierMode;
                 document.getElementById('statusDot').style.background = 'var(--accent)';
+                updateTierBadge('ready');
                 console.log('[Artemis Chat] Ready.');
             } else {
                 document.getElementById('statusDot').style.background = '#c06060';
                 document.getElementById('statusDot').title = 'Init failed';
-                addArtemisMessage('I am here, but my card engine did not rise properly. The hunt may be hindered.');
+                addArtemisMessage('I am here, but my card engine did not rise properly. The hunt may be hindered.', null, null);
             }
             document.getElementById('userInput').focus();
         }
 
         async function sendMessage() {
             if (isProcessing) return;
-            const inputEl = document.getElementById('userInput');
-            const input = inputEl.value.trim();
+            var inputEl = document.getElementById('userInput');
+            var input = inputEl.value.trim();
             if (!input) return;
 
             inputEl.value = '';
@@ -326,34 +338,53 @@
             conversationHistory.push({ role: 'user', content: input });
 
             if (messageCount === 0) {
-                const w = document.getElementById('welcomeMsg');
+                var w = document.getElementById('welcomeMsg');
                 if (w) w.style.display = 'none';
             }
 
             showTyping(true);
+            updateTierBadge('thinking');
             isProcessing = true;
             document.getElementById('btnSend').disabled = true;
 
             try {
-                const startTime = performance.now();
-                const result = await ArtemisAgent.processInput(input, {
+                var startTime = performance.now();
+                var result = await ArtemisAgent.processInput(input, {
                     conversationHistory: conversationHistory.slice(-10)
                 });
-                const elapsed = (performance.now() - startTime).toFixed(0);
-                console.log('[Artemis Chat] ' + elapsed + 'ms — ' + (result.metadata?.cardsPlayed?.join(', ') || 'none'));
+                var elapsed = (performance.now() - startTime).toFixed(0);
 
-                let responseText = result.text || 'I loosed an arrow, but it found no target. Try again?';
-                if (result.metadata?.cardsPlayed) {
-                    responseText += '\n<!--CARDS:' + result.metadata.cardsPlayed.join(',') + '-->';
+                var cardsPlayed = result.metadata ? result.metadata.cardsPlayed : [];
+                console.log('[Artemis Chat] ' + elapsed + 'ms — ' + (cardsPlayed.join(', ') || 'none'));
+
+                var responseText = result.text || 'I loosed an arrow, but it found no target. Try again?';
+
+                // Extract tier info if present in metadata or text
+                var tierInfo = extractTierInfo(result);
+                if (tierInfo) {
+                    currentTier = tierInfo;
+                    updateTierBadge(tierInfo);
+                } else {
+                    updateTierBadge('done');
                 }
 
-                addArtemisMessage(responseText, result.imageUrl, result.metadata);
-                conversationHistory.push({ role: 'assistant', content: result.text || '', imageUrl: result.imageUrl || null });
+                // Add card info as hidden metadata
+                if (cardsPlayed.length > 0) {
+                    responseText += '\n<!--CARDS:' + cardsPlayed.join(',') + '-->';
+                }
+
+                addArtemisMessage(responseText, result.imageUrl, { cardsPlayed: cardsPlayed, tier: currentTier });
+                conversationHistory.push({
+                    role: 'assistant',
+                    content: result.text || '',
+                    imageUrl: result.imageUrl || null
+                });
                 messageCount++;
 
             } catch (err) {
                 console.error('[Artemis Chat] Error:', err);
-                addArtemisMessage('My arrow faltered. An error occurred. Please try again.');
+                updateTierBadge('error');
+                addArtemisMessage('My arrow faltered. An error occurred. Please try again.', null, { tier: 'error' });
             }
 
             showTyping(false);
@@ -362,38 +393,82 @@
             document.getElementById('userInput').focus();
         }
 
+        function extractTierInfo(result) {
+            if (result.metadata && result.metadata.tier) {
+                return result.metadata.tier;
+            }
+            if (result.text) {
+                if (result.text.indexOf('[Model loading') > -1) return 'loading';
+                if (result.text.indexOf('Tier 2') > -1 || result.text.indexOf('SmolLM2') > -1) return 'browser';
+                if (result.text.indexOf('Tier 1') > -1 || result.text.indexOf('Pollinations') > -1) return 'pollinations';
+                if (result.text.indexOf('Tier 3') > -1 || result.text.indexOf('scripted') > -1) return 'scripted';
+            }
+            return null;
+        }
+
+        function updateTierBadge(tier) {
+            var badge = document.getElementById('tierBadge');
+            var map = {
+                'ready':       { text: '◈ READY', color: 'var(--silver)' },
+                'thinking':    { text: '◈ THINKING', color: 'var(--muted)' },
+                'pollinations':{ text: '☁ POLLINATIONS', color: '#60a5fa' },
+                'browser':     { text: '🧠 BROWSER', color: '#a78bfa' },
+                'loading':     { text: '⟳ LOADING', color: '#f59e0b' },
+                'scripted':    { text: '📜 SCRIPTED', color: '#c0a060' },
+                'done':        { text: '◈ DONE', color: 'var(--silver)' },
+                'error':       { text: '✗ ERROR', color: '#c06060' }
+            };
+            var info = map[tier] || map['done'];
+            badge.textContent = info.text;
+            badge.style.color = info.color;
+            badge.style.borderColor = info.color;
+        }
+
         function addUserMessage(text) {
-            const msg = document.createElement('div');
+            var msg = document.createElement('div');
             msg.className = 'message user';
             msg.innerHTML = '<div class="avatar">👤</div><div class="bubble">' + escapeHtml(text) + '</div>';
             document.getElementById('chatArea').appendChild(msg);
             scrollToBottom();
         }
 
-        function addArtemisMessage(text, imageUrl, metadata) {
-            const msg = document.createElement('div');
+        function addArtemisMessage(text, imageUrl, meta) {
+            var msg = document.createElement('div');
             msg.className = 'message artemis';
 
-            let cardTagHtml = '';
-            let cleanText = text;
-            const cardMatch = text.match(/<!--CARDS:(.+?)-->/);
-            if (cardMatch) {
-                cleanText = text.replace(/<!--CARDS:.+?-->/, '').trim();
-                cardTagHtml = '<div class="card-tag">🃏 ' + cardMatch[1].replace(/,/g, ' · ') + '</div>';
+            var tierTagHtml = '';
+            if (meta && meta.tier) {
+                var tierLabels = {
+                    'pollinations': '☁ Tier 1 · Pollinations',
+                    'browser': '🧠 Tier 2 · Browser Model',
+                    'loading': '⟳ Tier 2 · Loading model',
+                    'scripted': '📜 Tier 3 · Scripted fallback',
+                    'error': '✗ Error'
+                };
+                var tierLabel = tierLabels[meta.tier] || meta.tier;
+                tierTagHtml = '<div class="tier-tag">' + tierLabel + '</div>';
             }
 
-            let formattedText = formatText(cleanText);
-            let imageHtml = imageUrl
+            var cardTagHtml = '';
+            var cleanText = text;
+            var cardMatch = text.match(/<!--CARDS:(.+?)-->/);
+            if (cardMatch) {
+                cleanText = text.replace(/<!--CARDS:.+?-->/, '').trim();
+                cardTagHtml = '<div class="tier-tag">🃏 ' + cardMatch[1].replace(/,/g, ' · ') + '</div>';
+            }
+
+            var formattedText = formatText(cleanText);
+            var imageHtml = imageUrl
                 ? '<img src="' + imageUrl + '" alt="Generated" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\';"><span style="display:none;color:var(--muted);font-size:11px;">[Image failed to load]</span>'
                 : '';
 
-            let memoryNoteHtml = '';
-            if (formattedText.includes('*From memory:*')) {
-                const parts = formattedText.split('*From memory:*');
+            var memoryNoteHtml = '';
+            if (formattedText.indexOf('*From memory:*') > -1) {
+                var parts = formattedText.split('*From memory:*');
                 if (parts.length > 1) {
-                    const memoryPart = parts[1].split('<br><br>')[0];
+                    var memoryPart = parts[1].split('<br><br>')[0];
                     formattedText = parts[0].trim();
-                    if (parts[1].includes('<br><br>')) {
+                    if (parts[1].indexOf('<br><br>') > -1) {
                         formattedText += '<br><br>' + parts[1].substring(parts[1].indexOf('<br><br>') + 8).trim();
                     }
                     memoryNoteHtml = '<div class="memory-note">📜 ' + memoryPart.trim() + '</div>';
@@ -401,7 +476,7 @@
             }
 
             msg.innerHTML = '<div class="avatar">🏹</div><div class="bubble">' +
-                formattedText + imageHtml + memoryNoteHtml + cardTagHtml + '</div>';
+                formattedText + imageHtml + memoryNoteHtml + cardTagHtml + tierTagHtml + '</div>';
 
             document.getElementById('chatArea').appendChild(msg);
             scrollToBottom();
@@ -413,7 +488,7 @@
         }
 
         function scrollToBottom() {
-            const area = document.getElementById('chatArea');
+            var area = document.getElementById('chatArea');
             area.scrollTop = area.scrollHeight;
         }
 
@@ -433,7 +508,7 @@
         }
 
         function escapeHtml(text) {
-            const d = document.createElement('div');
+            var d = document.createElement('div');
             d.textContent = text;
             return d.innerHTML;
         }
@@ -443,13 +518,14 @@
                 event.preventDefault();
                 sendMessage();
             }
-            setTimeout(() => autoResize(event.target), 0);
+            setTimeout(function() { autoResize(event.target); }, 0);
         }
 
-        boot().catch(err => {
+        boot().catch(function(err) {
             console.error('[Artemis Chat] Boot failed:', err);
             document.getElementById('statusDot').style.background = '#c06060';
-            const w = document.getElementById('welcomeMsg');
+            updateTierBadge('error');
+            var w = document.getElementById('welcomeMsg');
             if (w) w.innerHTML = '<div class="big-icon">🏹</div><h2>Artemis</h2><p style="color:#c06060;">The huntress could not rise. Check console.</p>';
         });
     </script>

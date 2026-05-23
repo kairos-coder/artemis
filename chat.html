@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Artemis · EaldfornAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --void:      #0a0f0a;
+      --deep:      #0e140e;
+      --surface:   #1a221a;
+      --silver:    #8a9b8a;
+      --artemis:   #7a9a6a;
+      --artemis-hi:#a0c090;
+      --artemis-dim:rgba(122,154,106,0.1);
+      --cream:     #e0e8d8;
+      --mist:      #6a7060;
+      --ff-display: 'Cinzel', serif;
+      --ff-body:    'Cormorant Garamond', serif;
+      --ff-mono:    'JetBrains Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--void);
+      color: var(--cream);
+      font-family: var(--ff-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    .sanctum-header {
+      width: 100%;
+      max-width: 720px;
+      padding: 3rem 2rem 1rem;
+      text-align: center;
+    }
+
+    .sanctum-eyebrow {
+      font-family: var(--ff-mono);
+      font-size: 0.55rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--artemis);
+      opacity: 0.5;
+      margin-bottom: 1rem;
+    }
+
+    .sanctum-title {
+      font-family: var(--ff-display);
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 900;
+      background: linear-gradient(170deg, var(--cream) 30%, var(--artemis) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+
+    .sanctum-subtitle {
+      font-family: var(--ff-body);
+      font-style: italic;
+      font-size: 1rem;
+      color: var(--mist);
+      opacity: 0.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .sanctum-capabilities {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .capability {
+      font-family: var(--ff-mono);
+      font-size: 0.5rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--artemis);
+      opacity: 0.45;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .capability::before { content: '◆'; font-size: 0.4rem; }
+
+    .tool-bar {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .tool-chip {
+      font-family: var(--ff-mono);
+      font-size: 0.45rem;
+      letter-spacing: 0.15em;
+      color: var(--artemis);
+      background: var(--artemis-dim);
+      border: 1px solid rgba(122,154,106,0.15);
+      padding: 0.25rem 0.6rem;
+      border-radius: 2px;
+      opacity: 0.6;
+    }
+
+    .tool-chip.active {
+      opacity: 1;
+      border-color: rgba(122,154,106,0.4);
+      background: rgba(122,154,106,0.18);
+    }
+
+    .back-link {
+      font-family: var(--ff-mono);
+      font-size: 0.52rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--mist);
+      opacity: 0.4;
+      margin-bottom: 1rem;
+      display: inline-block;
+      transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--artemis); opacity: 0.7; }
+
+    .chat-container {
+      width: 100%;
+      max-width: 720px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0 2rem 2rem;
+    }
+
+    .chat-messages {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1rem 0;
+      max-height: 55vh;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+
+    .message {
+      display: flex;
+      gap: 0.8rem;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .message.user { flex-direction: row-reverse; }
+
+    .message-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 2px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+    }
+
+    .message.artemis .message-avatar {
+      background: rgba(122,154,106,0.12);
+      color: var(--artemis);
+      border: 1px solid rgba(122,154,106,0.2);
+    }
+
+    .message.user .message-avatar {
+      background: rgba(255,255,255,0.03);
+      color: var(--mist);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .message-bubble {
+      max-width: 75%;
+      padding: 0.8rem 1.1rem;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .message.artemis .message-bubble {
+      background: var(--surface);
+      border-left: 2px solid rgba(122,154,106,0.25);
+      color: var(--cream);
+    }
+
+    .message.user .message-bubble {
+      background: rgba(122,154,106,0.05);
+      border-right: 2px solid rgba(122,154,106,0.12);
+      color: var(--cream);
+    }
+
+    .message-sender {
+      font-family: var(--ff-mono);
+      font-size: 0.48rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--artemis);
+      opacity: 0.45;
+      margin-bottom: 0.2rem;
+    }
+
+    .message-image {
+      margin-top: 0.5rem;
+      border-radius: 3px;
+      max-width: 100%;
+      border: 1px solid rgba(122,154,106,0.15);
+      display: block;
+    }
+
+    .tools-used {
+      margin-top: 0.5rem;
+      display: flex;
+      gap: 0.3rem;
+      flex-wrap: wrap;
+    }
+
+    .tool-used {
+      font-family: var(--ff-mono);
+      font-size: 0.4rem;
+      letter-spacing: 0.12em;
+      color: var(--artemis);
+      opacity: 0.4;
+    }
+
+    .chat-input-area {
+      display: flex;
+      gap: 0.8rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(122,154,106,0.08);
+    }
+
+    .chat-input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid rgba(122,154,106,0.12);
+      border-radius: 3px;
+      padding: 0.85rem 1rem;
+      color: var(--cream);
+      font-family: var(--ff-body);
+      font-size: 0.95rem;
+      resize: none;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .chat-input:focus { border-color: rgba(122,154,106,0.3); }
+    .chat-input::placeholder { color: var(--mist); opacity: 0.35; font-style: italic; }
+
+    .chat-send {
+      background: linear-gradient(135deg, var(--artemis), var(--artemis-hi));
+      color: var(--void);
+      border: none;
+      border-radius: 3px;
+      padding: 0.85rem 1.6rem;
+      font-family: var(--ff-display);
+      font-size: 0.6rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(122,154,106,0.15);
+    }
+
+    .chat-send:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 28px rgba(122,154,106,0.25);
+    }
+
+    .chat-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .loading-dots { display: flex; gap: 4px; padding: 0.5rem 0; }
+    .loading-dots span {
+      width: 5px; height: 5px;
+      background: var(--artemis);
+      border-radius: 50%;
+      animation: dotPulse 1.2s ease-in-out infinite;
+      opacity: 0.3;
+    }
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    .status-bar {
+      font-family: var(--ff-mono);
+      font-size: 0.48rem;
+      letter-spacing: 0.2em;
+      color: var(--mist);
+      opacity: 0.35;
+      text-align: center;
+      padding: 0.4rem;
+    }
+
+    .status-bar .active { color: var(--artemis); opacity: 0.6; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes dotPulse {
+      0%, 100% { opacity: 0.2; }
+      50%      { opacity: 0.7; }
+    }
+
+    @media (max-width: 600px) {
+      .sanctum-header { padding: 2rem 1.2rem 0.5rem; }
+      .chat-container { padding: 0 1.2rem 1.5rem; }
+      .message-bubble { max-width: 85%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sanctum-header">
+  <p class="sanctum-eyebrow">// EaldfornAI · Personal Agent</p>
+  <h1 class="sanctum-title">Artemis</h1>
+  <p class="sanctum-subtitle">She tracks. She hunts. She acts.</p>
+  <div class="sanctum-capabilities">
+    <span class="capability">Memory Search</span>
+    <span class="capability">Text & Image</span>
+    <span class="capability">Repo Hunt</span>
+    <span class="capability">Auto-Compress</span>
+  </div>
+  <div class="tool-bar" id="toolBar">
+    <span class="tool-chip">🗄️ GaiaDB</span>
+    <span class="tool-chip">💬 Text</span>
+    <span class="tool-chip">🖼️ Image</span>
+    <span class="tool-chip">🔍 Hunt</span>
+    <span class="tool-chip">📦 Compress</span>
+  </div>
+  <a class="back-link" href="index.html">← Return to the Temple</a>
+  <a class="back-link" href="terminal.html" style="margin-left:1rem;">🏹 Open Terminal</a>
+</div>
+
+<div class="chat-container">
+  <div class="chat-messages" id="chatMessages"></div>
+
+  <div class="status-bar" id="statusBar">
+    Initializing agent...
+  </div>
+
+  <div class="chat-input-area">
+    <textarea 
+      class="chat-input" 
+      id="chatInput" 
+      placeholder="Ask Artemis to find, generate, or track..."
+      rows="1"
+      disabled
+    ></textarea>
+    <button class="chat-send" id="sendBtn" disabled>Hunt</button>
+  </div>
+</div>
+
+<script src="agent.js"></script>
+<script>
+  // ── SUPABASE CONFIG ───────────────────────────────────────
+  const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+  const SUPABASE_KEY = 'YOUR_PUBLISHABLE_KEY';
+  window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const sb = window.supabase;
+
+  // ── DOM ───────────────────────────────────────────────────
+  const messagesEl = document.getElementById('chatMessages');
+  const inputEl    = document.getElementById('chatInput');
+  const sendBtn    = document.getElementById('sendBtn');
+  const statusBar  = document.getElementById('statusBar');
+  const toolBar    = document.getElementById('toolBar');
+
+  let sessionId = null;
+  let agentReady = false;
+
+  // ── HELPERS ───────────────────────────────────────────────
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function addMessage(role, text, imageUrl = null, toolsUsed = []) {
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+    
+    let bubbleContent = escapeHtml(text);
+    
+    if (imageUrl) {
+      bubbleContent += `<img class="message-image" src="${imageUrl}" alt="Generated image" loading="lazy" />`;
+    }
+    
+    if (toolsUsed.length > 0) {
+      bubbleContent += `<div class="tools-used">`;
+      for (const tool of toolsUsed) {
+        bubbleContent += `<span class="tool-used">${tool}</span>`;
+      }
+      bubbleContent += `</div>`;
+    }
+
+    div.innerHTML = `
+      <div class="message-avatar">${role === 'artemis' ? '🏹' : '?'}</div>
+      <div>
+        <div class="message-sender">${role === 'artemis' ? 'ARTEMIS' : 'YOU'}</div>
+        <div class="message-bubble">${bubbleContent}</div>
+      </div>
+    `;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function showLoading() {
+    const div = document.createElement('div');
+    div.className = 'message artemis';
+    div.id = 'loadingMsg';
+    div.innerHTML = `
+      <div class="message-avatar">🏹</div>
+      <div>
+        <div class="message-sender">ARTEMIS</div>
+        <div class="message-bubble">
+          <div class="loading-dots"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+    `;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function removeLoading() {
+    const el = document.getElementById('loadingMsg');
+    if (el) el.remove();
+  }
+
+  function highlightTools(cardVotes) {
+    const chips = toolBar.querySelectorAll('.tool-chip');
+    const cardNames = ['GaiaDB_recall', 'Pollinations-Text', 'Pollinations-Image', 'Browser-Hunt', 'COMPRESS'];
+    
+    chips.forEach((chip, i) => {
+      const vote = cardVotes.find(v => v.card === cardNames[i]);
+      if (vote && vote.match) {
+        chip.classList.add('active');
+        setTimeout(() => chip.classList.remove('active'), 3000);
+      }
+    });
+  }
+
+  // ── SESSION ───────────────────────────────────────────────
+  async function initSession() {
+    let token = localStorage.getItem('apollo_session_token');
+    if (!token) {
+      token = crypto.randomUUID();
+      localStorage.setItem('apollo_session_token', token);
+    }
+
+    try {
+      const { data } = await sb.from('sessions')
+        .select('id')
+        .eq('session_token', token)
+        .single();
+
+      if (data) {
+        sessionId = data.id;
+        await sb.from('sessions').update({ last_active: new Date().toISOString() }).eq('session_token', token);
+      } else {
+        const { data: newSess } = await sb.from('sessions')
+          .insert({ session_token: token })
+          .select('id')
+          .single();
+        sessionId = newSess?.id || null;
+      }
+    } catch (e) {
+      console.warn('Session init failed, running offline:', e.message);
+    }
+  }
+
+  async function logMessage(role, content) {
+    if (!sessionId) return;
+    try {
+      await sb.from('conversations').insert({
+        session_id: sessionId,
+        olympian: 'artemis',
+        role: role,
+        content: content
+      });
+    } catch (e) {}
+  }
+
+  // ── HANDLE SEND ───────────────────────────────────────────
+  async function handleSend() {
+    const userMessage = inputEl.value.trim();
+    if (!userMessage || !agentReady) return;
+
+    inputEl.disabled = true;
+    sendBtn.disabled = true;
+    inputEl.value = '';
+
+    addMessage('user', userMessage);
+    await logMessage('user', userMessage);
+    showLoading();
+    statusBar.textContent = 'Hunting...';
+
+    try {
+      const result = await window.ArtemisAgent.process(userMessage, {
+        verbose: false,
+        autoCompress: true,
+        sessionId: sessionId
+      });
+
+      removeLoading();
+
+      // Check for images in results
+      let imageUrl = null;
+      const toolsUsed = [];
+      for (const r of result.results) {
+        toolsUsed.push(r.icon + ' ' + r.card);
+        if (r.output.imageUrl) {
+          imageUrl = r.output.imageUrl;
+        }
+      }
+
+      addMessage('artemis', result.text, imageUrl, toolsUsed);
+      await logMessage('artemis', result.text);
+
+      // Highlight matched tool chips
+      if (result.cardVotes) {
+        highlightTools(result.cardVotes);
+      }
+
+      statusBar.innerHTML = '<span class="active">🏹 Ready.</span>';
+    } catch (err) {
+      removeLoading();
+      addMessage('artemis', 'The hunt failed. ' + err.message);
+      statusBar.innerHTML = '<span class="active">🏹 Ready. Try again.</span>';
+      console.error('Error:', err);
+    }
+
+    inputEl.disabled = false;
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+
+  // ── INIT ──────────────────────────────────────────────────
+  async function init() {
+    await initSession();
+
+    // Load the agent (classifier loads in background)
+    statusBar.textContent = 'Loading agent...';
+    
+    try {
+      // Pre-warm the classifier
+      window.ArtemisAgent.loadClassifier().then(() => {
+        agentReady = true;
+        statusBar.innerHTML = '<span class="active">🏹 Agent ready. All tools loaded.</span>';
+      }).catch(() => {
+        agentReady = true; // Works with heuristic fallback
+        statusBar.innerHTML = '<span class="active">🏹 Ready. (heuristic mode)</span>';
+      });
+      
+      // Enable input immediately — agent works with heuristic until classifier loads
+      setTimeout(() => {
+        if (!agentReady) {
+          agentReady = true;
+          statusBar.innerHTML = '<span class="active">🏹 Ready.</span>';
+        }
+      }, 3000);
+      
+    } catch (e) {
+      agentReady = true;
+      statusBar.innerHTML = '<span class="active">🏹 Ready.</span>';
+    }
+
+    inputEl.disabled = false;
+    sendBtn.disabled = false;
+    inputEl.focus();
+
+    const compressed = localStorage.getItem('artemis_compressed_memory');
+    const greeting = compressed 
+      ? `Artemis active. Memory snapshot loaded: "${compressed}"\n\nI can search your conversations, generate text and images, hunt through your repos, and compress memory. What are we tracking?`
+      : 'Artemis active. I can search your conversations, generate text and images, hunt through your repos, and compress memory. What are we tracking?';
+
+    addMessage('artemis', greeting);
+  }
+
+  // ── EVENT LISTENERS ───────────────────────────────────────
+  sendBtn.addEventListener('click', handleSend);
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  });
+
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 150) + 'px';
+  });
+
+  // ── START ─────────────────────────────────────────────────
+  init();
+</script>
+
+</body>
+</html>

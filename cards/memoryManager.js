@@ -295,26 +295,29 @@ var memoryManager = {
         var summary = this._generateSessionSummary();
         
         // 2. Push summary to GaiaDB if connected
-        if (typeof supabase !== 'undefined' && supabase) {
-            try {
-                var sessionsTable = (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.tables)
-                    ? SUPABASE_CONFIG.tables.sessions
-                    : 'sessions';
-                
-                await supabase.from(sessionsTable).upsert({
-                    session_token: localStorage.getItem('artemis_session_id'),
-                    summary: summary,
-                    message_count: this._localDB.messages.length,
-                    graph_nodes: Object.keys(this._graph.nodes).length,
-                    graph_edges: this._graph.edges.length,
-                    last_active: new Date().toISOString(),
-                    ended_at: new Date().toISOString()
-                });
-                console.log('[MemoryManager] Session summary pushed to GaiaDB');
-            } catch(err) {
-                console.warn('[MemoryManager] Summary push failed:', err.message);
-            }
-        }
+var sb = (typeof window !== 'undefined' && window.supabase) ? window.supabase : null;
+if (sb) {
+    try {
+        var sessionsTable = (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.tables)
+            ? SUPABASE_CONFIG.tables.sessions
+            : 'sessions';
+        
+        await sb.from(sessionsTable).upsert({
+            session_token: localStorage.getItem('artemis_session_id'),
+            summary: summary,
+            message_count: this._localDB.messages.length,
+            graph_nodes: Object.keys(this._graph.nodes).length,
+            graph_edges: this._graph.edges.length,
+            last_active: new Date().toISOString(),
+            ended_at: new Date().toISOString()
+        });
+        console.log('[MemoryManager] Session summary pushed to GaiaDB');
+    } catch(err) {
+        console.warn('[MemoryManager] Summary push failed:', err.message);
+    }
+} else {
+    console.log('[MemoryManager] Supabase not connected — session summary saved locally only');
+}
         
         // 3. Compact localStorage
         this._compactLocalDB();

@@ -1,9 +1,11 @@
 // ============================================
-// ARTEMIS AGENT — EaldfornAI Card Router
+// ARTEMIS AGENT — EaldfornAI Card Router v2.1
 // ============================================
-// Loads card registry, classifies user input,
-// votes on cards, executes the winning hand,
-// and logs every decision for learning.
+// Loads card registry from config.js
+// Reads Supabase config from SUPABASE_CONFIG
+// Classifies → Selects → Sequences → Executes → Combines → Logs
+// Heuristic classifier (ML disabled pending CDN fix)
+// All persistence via GaiaDB + localStorage
 // ============================================
 
 const ArtemisAgent = (function() {
@@ -12,8 +14,8 @@ const ArtemisAgent = (function() {
     // ============================================
     // STATE
     // ============================================
-    let cards = [];                 // Loaded card modules
-    let cardRegistry = [];          // Config definitions
+    let cards = [];
+    let cardRegistry = [];
     let routerConfig = null;
     let persistenceConfig = null;
     let supabase = null;
@@ -24,153 +26,177 @@ const ArtemisAgent = (function() {
     // ============================================
     // INITIALIZATION
     // ============================================
-    async function init(options = {}) {
+    async function init() {
         if (isInitialized) {
             console.log('[Artemis] Already initialized.');
             return true;
         }
 
         console.log('[Artemis] Initializing EaldfornAI Router...');
+        printBanner();
 
         try {
-            // 1. Load config
-            await loadConfig();
+            // 1. Load config (cards, router, persistence, supabase)
+            loadConfig();
 
             // 2. Load all card modules
             await loadAllCards();
 
-            // 3. Set up Supabase if available
-            if (options.supabaseUrl && options.supabaseKey) {
-                await setupSupabase(options.supabaseUrl, options.supabaseKey);
-            }
+            // 3. Connect Supabase
+            await connectSupabase();
 
             // 4. Get or create session
-            sessionId = await getOrCreateSession();
+            sessionId = getOrCreateSession();
 
-            // 5. Load learned weights from localStorage
+            // 5. Load learned weights
             loadLearnedWeights();
 
-            // 6. Initialize ML classifier if configured
-            if (routerConfig.classifierMode === 'hybrid' || routerConfig.classifierMode === 'ml') {
-                await initMLClassifier();
-            }
+            // 6. Classifier mode (ML disabled pending CDN fix)
+            routerConfig.classifierMode = 'heuristic';
+            console.log('[Artemis] Classifier: heuristic (ML disabled — CDN fix pending)');
 
             isInitialized = true;
-            console.log('[Artemis] Initialized. Deck:', cards.length, 'cards. Session:', sessionId);
+            console.log('[Artemis] ✓ Initialized — %d cards, session: %s', cards.length, sessionId.substring(0, 16));
             return true;
 
         } catch (err) {
-            console.error('[Artemis] Init failed:', err);
+            console.error('[Artemis] ✗ Init failed:', err);
             return false;
         }
+    }
+
+    function printBanner() {
+        console.log('🏹  ═══════════════════════════════════');
+        console.log('    ARTEMIS — EaldfornAI Card Router');
+        console.log('    Monastery Phase-Lock: ACTIVE');
+        console.log('    ═══════════════════════════════════');
     }
 
     // ============================================
     // CONFIG LOADING
     // ============================================
-    async function loadConfig() {
-        // Check if config is already in global scope
+    function loadConfig() {
+        // All configs come from cards/config.js (loaded via <script> tag)
         if (typeof ARTEMIS_CARD_DECK !== 'undefined') {
             cardRegistry = ARTEMIS_CARD_DECK;
-        }
-        if (typeof ROUTER_CONFIG !== 'undefined') {
-            routerConfig = ROUTER_CONFIG;
-        }
-        if (typeof PERSISTENCE_CONFIG !== 'undefined') {
-            persistenceConfig = PERSISTENCE_CONFIG;
+        } else {
+            throw new Error('ARTEMIS_CARD_DECK not found. Is cards/config.js loaded?');
         }
 
-        // If not found, try to load dynamically
-        if (cardRegistry.length === 0) {
-            try {
-                const response = await fetch('cards/config.js');
-                const text = await response.text();
-                // Extract the arrays using Function constructor
-                // (config.js defines them as const — we eval safely)
-                const configFn = new Function(text + '; return { ARTEMIS_CARD_DECK, ROUTER_CONFIG, PERSISTENCE_CONFIG, CARD_CATEGORIES };');
-                const config = configFn();
-                cardRegistry = config.ARTEMIS_CARD_DECK || [];
-                routerConfig = config.ROUTER_CONFIG || {};
-                persistenceConfig = config.PERSISTENCE_CONFIG || {};
-            } catch (err) {
-                console.warn('[Artemis] Could not load config.js dynamically:', err.message);
-                // Use defaults
-                cardRegistry = [];
-                routerConfig = { confidenceThreshold: 0.35, maxCardsPerTurn: 3, executionOrder: ['meta', 'memory', 'retrieval', 'generation'] };
-                persistenceConfig = { localKeys: { compressedMemory: 'artemis_compressed_memory', recentActions: 'artemis_recent_actions' } };
-            }
-        }
+        routerConfig = typeof ROUTER_CONFIG !== 'undefined' 
+            ? ROUTER_CONFIG 
+            : { confidenceThreshold: 0.35, maxCardsPerTurn: 3, executionOrder: ['meta', 'memory', 'retrieval', 'generation'] };
+
+        persistenceConfig = typeof PERSISTENCE_CONFIG !== 'undefined'
+            ? PERSISTENCE_CONFIG
+            : { localKeys: { compressedMemory: 'artemis_compressed_memory', recentActions: 'artemis_recent_actions', cardWeights: 'artemis_card_weights', decisionHistory: 'artemis_decision_history' } };
+
+        console.log('[Artemis] Config loaded — %d cards in registry', cardRegistry.length);
     }
 
     // ============================================
     // CARD LOADING
     // ============================================
     async function loadAllCards() {
-        const cardFiles = cardRegistry.map(c => c.cardFile).filter(Boolean);
-        
+        const cardFiles = cardRegistry
+            .map(c => c.cardFile)
+            .filter(Boolean);
+
+        let loaded = 0;
+        let failed = 0;
+
         for (const cardFile of cardFiles) {
             try {
                 const cardModule = await loadCardModule(cardFile);
                 if (cardModule) {
                     cards.push(cardModule);
-                    // Link the execute function in the registry
+                    // Link execute function in registry
                     const registryCard = cardRegistry.find(c => c.cardFile === cardFile);
                     if (registryCard) {
                         registryCard.execute = cardModule.run.bind(cardModule);
+                        registryCard._module = cardModule;
                     }
-                    console.log('[Artemis] Loaded card:', cardModule.id);
+                    loaded++;
+                    console.log('[Artemis]   ✓ Loaded card: %s', cardModule.id);
                 }
             } catch (err) {
-                console.warn('[Artemis] Failed to load card', cardFile, ':', err.message);
+                failed++;
+                console.warn('[Artemis]   ✗ Failed to load %s: %s', cardFile, err.message);
             }
         }
+
+        console.log('[Artemis] Cards loaded: %d/%d (%d failed)', loaded, cardFiles.length, failed);
     }
 
     async function loadCardModule(cardFile) {
+        // Try dynamic fetch first
         try {
             const response = await fetch(`cards/${cardFile}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
             const text = await response.text();
-            // Extract the object using Function constructor
-            const moduleFn = new Function(text + '; return ' + cardFile.replace('.js', '') + ';');
-            const module = moduleFn();
-            return module;
-        } catch (err) {
-            // Try alternative: if card is already in global scope
+            const varName = cardFile.replace('.js', '');
+            const moduleFn = new Function(text + '; return ' + varName + ';');
+            return moduleFn();
+        } catch (fetchErr) {
+            // Fallback: check global scope
             const globalName = cardFile.replace('.js', '');
             if (typeof window[globalName] !== 'undefined') {
                 return window[globalName];
             }
-            throw err;
+            throw fetchErr;
         }
     }
 
     // ============================================
-    // SUPABASE SETUP
+    // SUPABASE
     // ============================================
-    async function setupSupabase(url, key) {
+    async function connectSupabase() {
+        if (typeof SUPABASE_CONFIG === 'undefined') {
+            console.warn('[Artemis] SUPABASE_CONFIG not found. Running without persistence.');
+            return;
+        }
+
+        const { url, anonKey } = SUPABASE_CONFIG;
+
+        if (!url || !anonKey) {
+            console.warn('[Artemis] Supabase URL or key missing. Running without persistence.');
+            return;
+        }
+
         try {
-            // Check if supabase client is available
             if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-                supabase = window.supabase.createClient(url, key);
-                console.log('[Artemis] Supabase connected.');
+                supabase = window.supabase.createClient(url, anonKey);
+                console.log('[Artemis] Supabase connected — %s', url);
             } else {
-                console.warn('[Artemis] Supabase client not found. Running without persistence.');
+                console.warn('[Artemis] Supabase client library not found. Is the CDN script loaded?');
             }
         } catch (err) {
-            console.warn('[Artemis] Supabase setup failed:', err.message);
+            console.warn('[Artemis] Supabase connection failed:', err.message);
         }
     }
 
-    async function getOrCreateSession() {
-        // Try localStorage first
-        const storedSession = localStorage.getItem('artemis_session_id');
-        if (storedSession) {
-            return storedSession;
+    // ============================================
+    // SESSION MANAGEMENT
+    // ============================================
+    function getOrCreateSession() {
+        const stored = localStorage.getItem('artemis_session_id');
+        if (stored) return stored;
+
+        const newSession = 'art_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+        localStorage.setItem('artemis_session_id', newSession);
+
+        // Also persist to Supabase if available
+        if (supabase) {
+            supabase.from(SUPABASE_CONFIG.tables.sessions).insert({
+                session_token: newSession,
+                last_active: new Date().toISOString()
+            }).then(({ error }) => {
+                if (error) console.warn('[Artemis] Session persist failed:', error.message);
+            });
         }
 
-        // Generate new session
-        const newSession = 'artemis_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-        localStorage.setItem('artemis_session_id', newSession);
         return newSession;
     }
 
@@ -179,118 +205,104 @@ const ArtemisAgent = (function() {
     // ============================================
     function loadLearnedWeights() {
         try {
-            const weightsKey = persistenceConfig?.localKeys?.cardWeights || 'artemis_card_weights';
-            const stored = localStorage.getItem(weightsKey);
-            if (stored) {
-                const learnedWeights = JSON.parse(stored);
-                // Apply learned weights to registry
-                for (const card of cardRegistry) {
-                    if (learnedWeights[card.id]) {
-                        card.defaultWeight = learnedWeights[card.id].weight;
-                        card.playCount = learnedWeights[card.id].plays || 0;
-                        card.successCount = learnedWeights[card.id].successes || 0;
-                    }
-                }
-                console.log('[Artemis] Loaded learned weights for', Object.keys(learnedWeights).length, 'cards');
+            const key = persistenceConfig?.localKeys?.cardWeights || 'artemis_card_weights';
+            const stored = localStorage.getItem(key);
+            if (!stored) {
+                console.log('[Artemis] No learned weights found. Using defaults.');
+                return;
             }
+
+            const learnedWeights = JSON.parse(stored);
+            let applied = 0;
+
+            for (const card of cardRegistry) {
+                if (learnedWeights[card.id]) {
+                    card.defaultWeight = learnedWeights[card.id].weight;
+                    card.playCount = learnedWeights[card.id].plays || 0;
+                    card.successCount = learnedWeights[card.id].successes || 0;
+                    applied++;
+                }
+            }
+
+            console.log('[Artemis] Learned weights applied to %d cards', applied);
         } catch (err) {
             console.warn('[Artemis] Weight load failed:', err.message);
         }
     }
 
-    // ============================================
-    // ML CLASSIFIER (Lazy init)
-    // ============================================
-    let mlPipeline = null;
-    let mlReady = false;
-
-    async function initMLClassifier() {
+    function getLearnedModifier(cardId) {
         try {
-            // Check if Transformers.js is available
-            if (typeof transformers === 'undefined') {
-                console.log('[Artemis] Transformers.js not loaded. Using heuristic only.');
-                routerConfig.classifierMode = 'heuristic';
-                return;
-            }
+            const key = persistenceConfig?.localKeys?.cardWeights || 'artemis_card_weights';
+            const stored = localStorage.getItem(key);
+            if (!stored) return 1.0;
 
-            const { pipeline } = transformers;
-            mlPipeline = await pipeline(
-                routerConfig.mlModel.task,
-                routerConfig.mlModel.model
-            );
-            mlReady = true;
-            console.log('[Artemis] ML classifier ready.');
-        } catch (err) {
-            console.warn('[Artemis] ML classifier init failed, falling back to heuristic:', err.message);
-            routerConfig.classifierMode = 'heuristic';
+            const weights = JSON.parse(stored);
+            if (!weights[cardId] || weights[cardId].plays < 5) return 1.0;
+
+            const successRate = weights[cardId].successes / Math.max(weights[cardId].plays, 1);
+            return 0.7 + (successRate * 0.6); // Range: 0.7–1.3
+        } catch {
+            return 1.0;
         }
     }
 
     // ============================================
-    // CORE: ROUTE & EXECUTE
+    // CORE PIPELINE: processInput()
     // ============================================
-    /**
-     * Main entry point. Called by chat.html or terminal.html.
-     * @param {string} userInput - The raw user message
-     * @param {Object} options - { systemPrompt, conversationHistory }
-     * @returns {Object} { text, imageUrl, metadata }
-     */
     async function processInput(userInput, options = {}) {
         if (!isInitialized) {
             await init();
         }
 
         decisionCount++;
-        console.log(`[Artemis] Decision #${decisionCount} — Input: "${userInput.substring(0, 80)}..."`);
+        const inputPreview = userInput.length > 80 ? userInput.substring(0, 77) + '...' : userInput;
+        console.log('[Artemis] Decision #%d — "%s"', decisionCount, inputPreview);
 
-        // === PHASE 1: CLASSIFY ===
-        const classification = await classifyInput(userInput);
-        const votedCards = classification.votedCards;
-
-        console.log('[Artemis] Cards voted:', votedCards.map(c => `${c.id}(${c.score.toFixed(2)})`).join(', '));
-
-        // === PHASE 2: SELECT ===
-        const selectedCards = selectCards(votedCards);
-        
-        // === PHASE 3: SEQUENCE ===
-        const sequencedCards = sequenceCards(selectedCards);
-
-        console.log('[Artemis] Execution order:', sequencedCards.map(c => c.id).join(' → '));
-
-        // === PHASE 4: EXECUTE ===
+        // Build execution context
         const context = {
             input: userInput,
             sessionId: sessionId,
             supabase: supabase,
-            systemPrompt: options.systemPrompt || getDefaultSystemPrompt(),
+            systemPrompt: options.systemPrompt || null,
             conversationHistory: options.conversationHistory || [],
             memoryContext: null,
-            votedCards: votedCards,
-            executedCards: sequencedCards,
+            votedCards: [],
+            executedCards: [],
             outputs: {}
         };
 
-        const results = await executeCards(sequencedCards, context);
-        context.outputs = results;
+        // Phase 1: Classify
+        context.votedCards = await classifyInput(userInput);
+        logVotes(context.votedCards);
 
-        // === PHASE 5: COMBINE OUTPUTS ===
-        const combined = combineOutputs(results, userInput);
+        // Phase 2: Select
+        const selectedCards = selectCards(context.votedCards);
 
-        // === PHASE 6: LOG DECISION ===
+        // Phase 3: Sequence
+        context.executedCards = sequenceCards(selectedCards);
+        logExecutionOrder(context.executedCards);
+
+        // Phase 4: Execute
+        context.outputs = await executeCards(context.executedCards, context);
+
+        // Phase 5: Combine
+        const combined = combineOutputs(context.outputs);
+
+        // Phase 6: Log decision (auto-trigger)
         await logDecision(context);
 
-        // === PHASE 7: TRIGGER AUTO CARDS ===
+        // Phase 7: Run auto cards
         await runAutoCards(context);
 
-        // Save recent actions to localStorage
+        // Phase 8: Save recent action
         saveRecentAction(userInput, combined);
 
         return {
             text: combined.text,
             imageUrl: combined.imageUrl || null,
             metadata: {
-                cardsPlayed: sequencedCards.map(c => c.id),
-                voteScores: Object.fromEntries(votedCards.map(c => [c.id, c.score])),
+                cardsPlayed: context.executedCards.map(c => c.id),
+                voteScores: Object.fromEntries(context.votedCards.map(c => [c.id, c.score])),
                 decisionNumber: decisionCount,
                 sessionId: sessionId
             }
@@ -298,171 +310,137 @@ const ArtemisAgent = (function() {
     }
 
     // ============================================
-    // CLASSIFIER
+    // PHASE 1: CLASSIFY
     // ============================================
     async function classifyInput(input) {
         const inputLower = input.toLowerCase();
         const votedCards = [];
 
         for (const card of cardRegistry) {
-            // Skip auto-trigger cards in classification
-            if (card.autoTrigger) continue;
+            if (card.autoTrigger) continue; // Skip auto-trigger cards
+            if (!card.matchPatterns || card.matchPatterns.length === 0) continue;
 
-            let score = 0;
+            const matchCount = card.matchPatterns.filter(pattern =>
+                inputLower.includes(pattern.toLowerCase())
+            ).length;
 
-            // Heuristic: pattern matching
-            if (card.matchPatterns && card.matchPatterns.length > 0) {
-                const matchCount = card.matchPatterns.filter(pattern => 
-                    inputLower.includes(pattern.toLowerCase())
-                ).length;
-                
-                if (matchCount > 0) {
-                    // Score based on matches relative to total patterns
-                    score = (matchCount / card.matchPatterns.length) * card.defaultWeight;
-                    // Bonus for exact matches
-                    score = Math.min(score * 1.2, 1.0);
+            if (matchCount > 0) {
+                let score = (matchCount / card.matchPatterns.length) * card.defaultWeight;
+                score = Math.min(score * 1.2, 1.0); // Bonus for exact matches, capped at 1.0
+
+                // Apply learned modifier
+                const modifier = getLearnedModifier(card.id);
+                score *= modifier;
+
+                if (score >= (routerConfig.confidenceThreshold || 0.35)) {
+                    votedCards.push({
+                        id: card.id,
+                        name: card.name,
+                        icon: card.icon,
+                        category: card.category,
+                        score: score,
+                        card: card
+                    });
                 }
-            }
-
-            // If ML is available, blend scores
-            if (mlReady && routerConfig.classifierMode === 'hybrid' && card.matchPatterns) {
-                try {
-                    const mlResult = await mlPipeline(input, card.matchPatterns);
-                    if (mlResult && mlResult.scores) {
-                        const topScore = Math.max(...mlResult.scores);
-                        // Blend: 60% heuristic, 40% ML
-                        score = score * 0.6 + topScore * 0.4;
-                    }
-                } catch (err) {
-                    // ML failed — stick with heuristic score
-                }
-            }
-
-            // Apply learned weight modifier
-            const learnedModifier = getLearnedModifier(card.id);
-            score *= learnedModifier;
-
-            if (score >= (routerConfig.confidenceThreshold || 0.35)) {
-                votedCards.push({
-                    id: card.id,
-                    name: card.name,
-                    icon: card.icon,
-                    category: card.category,
-                    score: score,
-                    card: card
-                });
             }
         }
 
         // Sort by score descending
         votedCards.sort((a, b) => b.score - a.score);
 
-        return { votedCards };
+        return votedCards;
     }
 
-    function getLearnedModifier(cardId) {
-        try {
-            const weightsKey = persistenceConfig?.localKeys?.cardWeights || 'artemis_card_weights';
-            const stored = localStorage.getItem(weightsKey);
-            if (!stored) return 1.0;
-            
-            const weights = JSON.parse(stored);
-            if (!weights[cardId]) return 1.0;
-            
-            const w = weights[cardId];
-            if (w.plays < 5) return 1.0; // Warmup period
-            
-            // Success rate modifier
-            const successRate = w.successes / Math.max(w.plays, 1);
-            // Range: 0.7 to 1.3 (cards that succeed more get voted higher)
-            return 0.7 + (successRate * 0.6);
-        } catch {
-            return 1.0;
+    function logVotes(votedCards) {
+        if (votedCards.length === 0) {
+            console.log('[Artemis] No cards voted. Falling back to default.');
+            return;
         }
+        const voteStr = votedCards.map(c => `${c.icon} ${c.id}(${c.score.toFixed(2)})`).join(', ');
+        console.log('[Artemis] Votes: ' + voteStr);
     }
 
     // ============================================
-    // CARD SELECTION & SEQUENCING
+    // PHASE 2: SELECT
     // ============================================
     function selectCards(votedCards) {
         const maxCards = routerConfig.maxCardsPerTurn || 3;
-        let selected = votedCards.slice(0, maxCards);
 
-        // Ensure at least one card if nothing voted (fallback to text generation)
-        if (selected.length === 0) {
+        if (votedCards.length === 0) {
+            // Fallback: always try pollinations_text
             const fallback = cardRegistry.find(c => c.id === 'pollinations_text');
             if (fallback) {
-                selected = [{
+                console.log('[Artemis] No votes — falling back to pollinations_text');
+                return [{
                     id: fallback.id,
                     name: fallback.name,
                     icon: fallback.icon,
                     category: fallback.category,
-                    score: 0.3,
+                    score: 0.25,
                     card: fallback
                 }];
             }
+            return [];
         }
 
-        return selected;
-    }
-
-    function sequenceCards(selectedCards) {
-        const orderPriority = routerConfig.executionOrder || ['meta', 'memory', 'retrieval', 'generation'];
-        
-        return selectedCards.sort((a, b) => {
-            const priorityA = orderPriority.indexOf(a.category);
-            const priorityB = orderPriority.indexOf(b.category);
-            
-            // Categories not in the list go last
-            const pa = priorityA >= 0 ? priorityA : 999;
-            const pb = priorityB >= 0 ? priorityB : 999;
-            
-            return pa - pb;
-        });
+        return votedCards.slice(0, maxCards);
     }
 
     // ============================================
-    // EXECUTION
+    // PHASE 3: SEQUENCE
+    // ============================================
+    function sequenceCards(selectedCards) {
+        const order = routerConfig.executionOrder || ['meta', 'memory', 'retrieval', 'generation'];
+
+        return selectedCards.sort((a, b) => {
+            const pa = order.indexOf(a.category);
+            const pb = order.indexOf(b.category);
+            return (pa >= 0 ? pa : 999) - (pb >= 0 ? pb : 999);
+        });
+    }
+
+    function logExecutionOrder(cards) {
+        const order = cards.map(c => c.icon + ' ' + c.id).join(' → ');
+        console.log('[Artemis] Execution: ' + (order || 'none'));
+    }
+
+    // ============================================
+    // PHASE 4: EXECUTE
     // ============================================
     async function executeCards(sequencedCards, context) {
         const outputs = {};
 
         for (const cardItem of sequencedCards) {
             const card = cardItem.card;
-            
+
             if (!card.execute) {
-                console.warn('[Artemis] No execute function for card:', card.id);
+                console.warn('[Artemis] No execute function for: %s', card.id);
                 continue;
             }
 
-            console.log('[Artemis] Executing card:', card.id);
+            console.log('[Artemis] ▶ Executing: %s', card.id);
 
             try {
-                const timeout = card.timeout || 10000;
+                const timeoutMs = card.timeout || 10000;
                 const result = await withTimeout(
                     card.execute(context),
-                    timeout,
-                    `Card ${card.id} timed out`
+                    timeoutMs,
+                    `Card "${card.id}" timed out after ${timeoutMs}ms`
                 );
 
                 if (result && result.success) {
-                    // Merge card output data into context.outputs
                     if (result.data) {
                         Object.assign(outputs, result.data);
-                        
-                        // Also update context for downstream cards
-                        if (result.data.memory_context) {
-                            context.memoryContext = result.data.memory_context;
-                        }
-                        if (result.data.text_output) {
-                            context.textOutput = result.data.text_output;
-                        }
+                        // Update context for downstream cards
+                        if (result.data.memory_context) context.memoryContext = result.data.memory_context;
+                        if (result.data.text_output) context.textOutput = result.data.text_output;
                     }
+                    console.log('[Artemis]   ✓ %s succeeded', card.id);
                 } else {
-                    console.warn('[Artemis] Card', card.id, 'returned failure:', result?.error);
+                    console.warn('[Artemis]   ✗ %s failed: %s', card.id, result?.error || 'unknown');
                 }
             } catch (err) {
-                console.warn('[Artemis] Card', card.id, 'threw error:', err.message);
+                console.warn('[Artemis]   ✗ %s error: %s', card.id, err.message);
             }
         }
 
@@ -472,20 +450,20 @@ const ArtemisAgent = (function() {
     function withTimeout(promise, ms, errorMessage) {
         return Promise.race([
             promise,
-            new Promise((_, reject) => 
+            new Promise((_, reject) =>
                 setTimeout(() => reject(new Error(errorMessage)), ms)
             )
         ]);
     }
 
     // ============================================
-    // OUTPUT COMBINATION
+    // PHASE 5: COMBINE OUTPUTS
     // ============================================
-    function combineOutputs(outputs, userInput) {
+    function combineOutputs(outputs) {
         let text = '';
         let imageUrl = null;
 
-        // Memory context comes first
+        // Memory context
         if (outputs.memory_context) {
             text += `*From memory:*\n${outputs.memory_context}\n\n`;
         }
@@ -495,26 +473,26 @@ const ArtemisAgent = (function() {
             text += `*From the web:*\n${outputs.web_context}\n\n`;
         }
 
-        // Generated text (the main response)
+        // Generated text
         if (outputs.text_output) {
             text += outputs.text_output;
         }
 
-        // Compressed memory (appended as note)
+        // Compressed memory note
         if (outputs.compressed_memory) {
             text += `\n\n> *${outputs.compressed_memory}*`;
         }
 
-        // Image URL
+        // Image
         if (outputs.image_url) {
             imageUrl = outputs.image_url;
-            if (!text) {
-                text = `Here's the image you requested:`;
+            if (!text.trim()) {
+                text = 'Here is the image you requested:';
             }
         }
 
-        // Fallback if nothing produced
-        if (!text && !imageUrl) {
+        // Ultimate fallback
+        if (!text.trim() && !imageUrl) {
             text = 'I received your message, but none of my cards produced output. Try rephrasing?';
         }
 
@@ -522,43 +500,45 @@ const ArtemisAgent = (function() {
     }
 
     // ============================================
-    // DECISION LOGGING
+    // PHASE 6: LOG DECISION
     // ============================================
     async function logDecision(context) {
-        // The decisionLog card handles this if loaded
         const decisionCard = cards.find(c => c.id === 'decision_log');
-        if (decisionCard && decisionCard.run) {
-            try {
-                await decisionCard.run({
-                    input: context.input,
-                    votedCards: context.votedCards,
-                    executedCards: context.executedCards,
-                    outputs: context.outputs,
-                    sessionId: context.sessionId,
-                    supabase: supabase
-                });
-            } catch (err) {
-                console.warn('[Artemis] Decision logging failed:', err.message);
-            }
+        if (!decisionCard || !decisionCard.run) return;
+
+        try {
+            await decisionCard.run({
+                input: context.input,
+                votedCards: context.votedCards,
+                executedCards: context.executedCards,
+                outputs: context.outputs,
+                sessionId: context.sessionId,
+                supabase: supabase
+            });
+        } catch (err) {
+            console.warn('[Artemis] Decision logging failed:', err.message);
         }
     }
 
+    // ============================================
+    // PHASE 7: AUTO CARDS
+    // ============================================
     async function runAutoCards(context) {
         const autoCards = cardRegistry.filter(c => c.autoTrigger);
-        for (const card of autoCards) {
-            const loadedCard = cards.find(c => c.id === card.id);
+        for (const cardDef of autoCards) {
+            const loadedCard = cards.find(c => c.id === cardDef.id);
             if (loadedCard && loadedCard.run) {
                 try {
                     await loadedCard.run(context);
                 } catch (err) {
-                    console.warn('[Artemis] Auto card', card.id, 'failed:', err.message);
+                    console.warn('[Artemis] Auto card %s failed: %s', cardDef.id, err.message);
                 }
             }
         }
     }
 
     // ============================================
-    // PERSISTENCE HELPERS
+    // PHASE 8: SAVE RECENT ACTION
     // ============================================
     function saveRecentAction(input, output) {
         try {
@@ -566,24 +546,17 @@ const ArtemisAgent = (function() {
             const existing = JSON.parse(localStorage.getItem(key) || '[]');
             existing.push({
                 input: input.substring(0, 200),
-                output: output.text?.substring(0, 200) || '',
+                output: (output.text || '').substring(0, 200),
+                hasImage: !!output.imageUrl,
                 timestamp: new Date().toISOString()
             });
-            // Keep last 50
             if (existing.length > 50) {
                 existing.splice(0, existing.length - 50);
             }
             localStorage.setItem(key, JSON.stringify(existing));
-        } catch (err) {
+        } catch {
             // Non-critical
         }
-    }
-
-    function getDefaultSystemPrompt() {
-        return `You are Artemis, Goddess of the Hunt, an AI agent of Ealdforn Studios. 
-You speak with precision and clarity. You execute cards from your deck to serve the human operator.
-You are direct, capable, and mythic in tone — but never verbose.
-Respond in 1-3 sentences unless the task demands more detail.`;
     }
 
     // ============================================
@@ -593,11 +566,16 @@ Respond in 1-3 sentences unless the task demands more detail.`;
         return {
             initialized: isInitialized,
             cardsLoaded: cards.length,
-            cardsAvailable: cardRegistry.map(c => ({ id: c.id, name: c.name, icon: c.icon })),
+            cardsAvailable: cardRegistry.map(c => ({
+                id: c.id,
+                name: c.name,
+                icon: c.icon,
+                category: c.category
+            })),
             decisionCount: decisionCount,
             sessionId: sessionId,
             classifierMode: routerConfig?.classifierMode || 'heuristic',
-            mlReady: mlReady
+            supabaseConnected: !!supabase
         };
     }
 
@@ -623,7 +601,6 @@ Respond in 1-3 sentences unless the task demands more detail.`;
 
 })();
 
-// Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ArtemisAgent;
 }

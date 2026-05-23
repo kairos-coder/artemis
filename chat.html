@@ -1,613 +1,656 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Artemis · EaldfornAI</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    :root {
-      --void:      #0a0f0a;
-      --deep:      #0e140e;
-      --surface:   #1a221a;
-      --silver:    #8a9b8a;
-      --artemis:   #7a9a6a;
-      --artemis-hi:#a0c090;
-      --artemis-dim:rgba(122,154,106,0.1);
-      --cream:     #e0e8d8;
-      --mist:      #6a7060;
-      --ff-display: 'Cinzel', serif;
-      --ff-body:    'Cormorant Garamond', serif;
-      --ff-mono:    'JetBrains Mono', monospace;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artemis — Ealdforn Studios</title>
+    <style>
+        :root {
+            --bg: #0a0e0f;
+            --surface: #111618;
+            --border: #1f2a2d;
+            --text: #bcc8bc;
+            --text-bright: #e0ece0;
+            --accent: #7eb8a0;
+            --accent-glow: #a0d8c0;
+            --silver: #9aada0;
+            --green: #5a9070;
+            --muted: #5a6a5a;
+            --font-body: 'Georgia', 'Times New Roman', serif;
+            --font-mono: 'Courier New', 'SF Mono', monospace;
+        }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    body {
-      background: var(--void);
-      color: var(--cream);
-      font-family: var(--ff-body);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      overflow-x: hidden;
-    }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(ellipse at 50% 0%, rgba(126,184,160,0.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 100%, rgba(90,144,112,0.03) 0%, transparent 50%);
+        }
 
-    .sanctum-header {
-      width: 100%;
-      max-width: 720px;
-      padding: 3rem 2rem 1rem;
-      text-align: center;
-    }
+        /* HEADER */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .header .icon {
+            font-size: 28px;
+        }
+        .header .titles {
+            display: flex;
+            flex-direction: column;
+        }
+        .header .name {
+            font-size: 18px;
+            color: var(--accent-glow);
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+        .header .subtitle {
+            font-size: 11px;
+            color: var(--silver);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-family: var(--font-mono);
+        }
+        .header .spacer {
+            flex: 1;
+        }
+        .header .link {
+            font-size: 11px;
+            color: var(--muted);
+            text-decoration: none;
+            font-family: var(--font-mono);
+            letter-spacing: 0.5px;
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+        .header .link:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .header .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 6px rgba(126,184,160,0.5);
+        }
 
-    .sanctum-eyebrow {
-      font-family: var(--ff-mono);
-      font-size: 0.55rem;
-      letter-spacing: 0.35em;
-      text-transform: uppercase;
-      color: var(--artemis);
-      opacity: 0.5;
-      margin-bottom: 1rem;
-    }
+        /* CHAT AREA */
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
 
-    .sanctum-title {
-      font-family: var(--ff-display);
-      font-size: clamp(2rem, 5vw, 3.5rem);
-      font-weight: 900;
-      background: linear-gradient(170deg, var(--cream) 30%, var(--artemis) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0.5rem;
-    }
+        /* MESSAGE BUBBLES */
+        .message {
+            display: flex;
+            gap: 10px;
+            max-width: 85%;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+        .message.artemis {
+            align-self: flex-start;
+        }
 
-    .sanctum-subtitle {
-      font-family: var(--ff-body);
-      font-style: italic;
-      font-size: 1rem;
-      color: var(--mist);
-      opacity: 0.6;
-      margin-bottom: 1.5rem;
-    }
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .message.user .avatar {
+            background: var(--border);
+        }
+        .message.artemis .avatar {
+            background: #1a2a24;
+            border: 1px solid var(--green);
+        }
 
-    .sanctum-capabilities {
-      display: flex;
-      gap: 1.5rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: 1rem;
-    }
+        .bubble {
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .message.user .bubble {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-bright);
+        }
+        .message.artemis .bubble {
+            background: #111a16;
+            border: 1px solid #1a3025;
+            color: var(--text);
+        }
+        .bubble img {
+            max-width: 280px;
+            max-height: 280px;
+            border-radius: 8px;
+            margin-top: 8px;
+            border: 1px solid var(--border);
+        }
+        .bubble .memory-note {
+            font-size: 11px;
+            color: var(--silver);
+            font-style: italic;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid var(--border);
+        }
+        .bubble .card-tag {
+            font-size: 9px;
+            color: var(--muted);
+            font-family: var(--font-mono);
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
 
-    .capability {
-      font-family: var(--ff-mono);
-      font-size: 0.5rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--artemis);
-      opacity: 0.45;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
+        /* TYPING INDICATOR */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 8px 0;
+        }
+        .typing-indicator span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--muted);
+            animation: typePulse 1.4s infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typePulse {
+            0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+            30% { opacity: 1; transform: scale(1.1); }
+        }
 
-    .capability::before { content: '◆'; font-size: 0.4rem; }
+        /* INPUT BAR */
+        .input-bar {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .input-bar textarea {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-bright);
+            padding: 12px 16px;
+            font-family: var(--font-body);
+            font-size: 14px;
+            border-radius: 8px;
+            outline: none;
+            resize: none;
+            rows: 1;
+            max-height: 120px;
+            transition: border-color 0.2s;
+            line-height: 1.5;
+        }
+        .input-bar textarea:focus {
+            border-color: var(--accent);
+        }
+        .input-bar textarea::placeholder {
+            color: #3a4a40;
+            font-style: italic;
+        }
+        .input-bar button {
+            background: var(--accent);
+            border: none;
+            color: var(--bg);
+            padding: 12px 24px;
+            font-family: var(--font-body);
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .input-bar button:hover {
+            background: var(--accent-glow);
+            box-shadow: 0 0 16px rgba(126,184,160,0.3);
+        }
+        .input-bar button:disabled {
+            background: var(--border);
+            color: var(--muted);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
 
-    .tool-bar {
-      display: flex;
-      gap: 0.5rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: 1rem;
-    }
+        /* WELCOME */
+        .welcome {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--silver);
+        }
+        .welcome .big-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        .welcome h2 {
+            color: var(--accent-glow);
+            font-size: 22px;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        .welcome p {
+            font-size: 14px;
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
 
-    .tool-chip {
-      font-family: var(--ff-mono);
-      font-size: 0.45rem;
-      letter-spacing: 0.15em;
-      color: var(--artemis);
-      background: var(--artemis-dim);
-      border: 1px solid rgba(122,154,106,0.15);
-      padding: 0.25rem 0.6rem;
-      border-radius: 2px;
-      opacity: 0.6;
-    }
+        /* SCROLLBAR */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-    .tool-chip.active {
-      opacity: 1;
-      border-color: rgba(122,154,106,0.4);
-      background: rgba(122,154,106,0.18);
-    }
-
-    .back-link {
-      font-family: var(--ff-mono);
-      font-size: 0.52rem;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: var(--mist);
-      opacity: 0.4;
-      margin-bottom: 1rem;
-      display: inline-block;
-      transition: color 0.2s;
-    }
-    .back-link:hover { color: var(--artemis); opacity: 0.7; }
-
-    .chat-container {
-      width: 100%;
-      max-width: 720px;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 0 2rem 2rem;
-    }
-
-    .chat-messages {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      padding: 1rem 0;
-      max-height: 55vh;
-      overflow-y: auto;
-      scroll-behavior: smooth;
-    }
-
-    .message {
-      display: flex;
-      gap: 0.8rem;
-      animation: fadeUp 0.4s ease both;
-    }
-
-    .message.user { flex-direction: row-reverse; }
-
-    .message-avatar {
-      width: 34px;
-      height: 34px;
-      border-radius: 2px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.85rem;
-    }
-
-    .message.artemis .message-avatar {
-      background: rgba(122,154,106,0.12);
-      color: var(--artemis);
-      border: 1px solid rgba(122,154,106,0.2);
-    }
-
-    .message.user .message-avatar {
-      background: rgba(255,255,255,0.03);
-      color: var(--mist);
-      border: 1px solid rgba(255,255,255,0.06);
-    }
-
-    .message-bubble {
-      max-width: 75%;
-      padding: 0.8rem 1.1rem;
-      border-radius: 4px;
-      font-size: 0.95rem;
-      line-height: 1.6;
-    }
-
-    .message.artemis .message-bubble {
-      background: var(--surface);
-      border-left: 2px solid rgba(122,154,106,0.25);
-      color: var(--cream);
-    }
-
-    .message.user .message-bubble {
-      background: rgba(122,154,106,0.05);
-      border-right: 2px solid rgba(122,154,106,0.12);
-      color: var(--cream);
-    }
-
-    .message-sender {
-      font-family: var(--ff-mono);
-      font-size: 0.48rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--artemis);
-      opacity: 0.45;
-      margin-bottom: 0.2rem;
-    }
-
-    .message-image {
-      margin-top: 0.5rem;
-      border-radius: 3px;
-      max-width: 100%;
-      border: 1px solid rgba(122,154,106,0.15);
-      display: block;
-    }
-
-    .tools-used {
-      margin-top: 0.5rem;
-      display: flex;
-      gap: 0.3rem;
-      flex-wrap: wrap;
-    }
-
-    .tool-used {
-      font-family: var(--ff-mono);
-      font-size: 0.4rem;
-      letter-spacing: 0.12em;
-      color: var(--artemis);
-      opacity: 0.4;
-    }
-
-    .chat-input-area {
-      display: flex;
-      gap: 0.8rem;
-      padding-top: 1rem;
-      border-top: 1px solid rgba(122,154,106,0.08);
-    }
-
-    .chat-input {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid rgba(122,154,106,0.12);
-      border-radius: 3px;
-      padding: 0.85rem 1rem;
-      color: var(--cream);
-      font-family: var(--ff-body);
-      font-size: 0.95rem;
-      resize: none;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .chat-input:focus { border-color: rgba(122,154,106,0.3); }
-    .chat-input::placeholder { color: var(--mist); opacity: 0.35; font-style: italic; }
-
-    .chat-send {
-      background: linear-gradient(135deg, var(--artemis), var(--artemis-hi));
-      color: var(--void);
-      border: none;
-      border-radius: 3px;
-      padding: 0.85rem 1.6rem;
-      font-family: var(--ff-display);
-      font-size: 0.6rem;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      box-shadow: 0 4px 20px rgba(122,154,106,0.15);
-    }
-
-    .chat-send:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 28px rgba(122,154,106,0.25);
-    }
-
-    .chat-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
-
-    .loading-dots { display: flex; gap: 4px; padding: 0.5rem 0; }
-    .loading-dots span {
-      width: 5px; height: 5px;
-      background: var(--artemis);
-      border-radius: 50%;
-      animation: dotPulse 1.2s ease-in-out infinite;
-      opacity: 0.3;
-    }
-    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-
-    .status-bar {
-      font-family: var(--ff-mono);
-      font-size: 0.48rem;
-      letter-spacing: 0.2em;
-      color: var(--mist);
-      opacity: 0.35;
-      text-align: center;
-      padding: 0.4rem;
-    }
-
-    .status-bar .active { color: var(--artemis); opacity: 0.6; }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes dotPulse {
-      0%, 100% { opacity: 0.2; }
-      50%      { opacity: 0.7; }
-    }
-
-    @media (max-width: 600px) {
-      .sanctum-header { padding: 2rem 1.2rem 0.5rem; }
-      .chat-container { padding: 0 1.2rem 1.5rem; }
-      .message-bubble { max-width: 85%; }
-    }
-  </style>
+        /* MOBILE */
+        @media (max-width: 600px) {
+            .message { max-width: 95%; }
+            .bubble { font-size: 14px; }
+            .bubble img { max-width: 200px; max-height: 200px; }
+            .input-bar { padding: 10px; }
+            .input-bar button { padding: 10px 16px; font-size: 12px; }
+        }
+    </style>
 </head>
 <body>
 
-<div class="sanctum-header">
-  <p class="sanctum-eyebrow">// EaldfornAI · Personal Agent</p>
-  <h1 class="sanctum-title">Artemis</h1>
-  <p class="sanctum-subtitle">She tracks. She hunts. She acts.</p>
-  <div class="sanctum-capabilities">
-    <span class="capability">Memory Search</span>
-    <span class="capability">Text & Image</span>
-    <span class="capability">Repo Hunt</span>
-    <span class="capability">Auto-Compress</span>
-  </div>
-  <div class="tool-bar" id="toolBar">
-    <span class="tool-chip">🗄️ GaiaDB</span>
-    <span class="tool-chip">💬 Text</span>
-    <span class="tool-chip">🖼️ Image</span>
-    <span class="tool-chip">🔍 Hunt</span>
-    <span class="tool-chip">📦 Compress</span>
-  </div>
-  <a class="back-link" href="index.html">← Return to the Temple</a>
-  <a class="back-link" href="terminal.html" style="margin-left:1rem;">🏹 Open Terminal</a>
-</div>
-
-<div class="chat-container">
-  <div class="chat-messages" id="chatMessages"></div>
-
-  <div class="status-bar" id="statusBar">
-    Initializing agent...
-  </div>
-
-  <div class="chat-input-area">
-    <textarea 
-      class="chat-input" 
-      id="chatInput" 
-      placeholder="Ask Artemis to find, generate, or track..."
-      rows="1"
-      disabled
-    ></textarea>
-    <button class="chat-send" id="sendBtn" disabled>Hunt</button>
-  </div>
-</div>
-
-<script src="agent.js"></script>
-<script>
-  // ── SUPABASE CONFIG ───────────────────────────────────────
-  const SUPABASE_URL = 'https://nbdvavzqvxrlxhsbrluz.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_6x1xlieXjs3dWqEETQcxnQ_4L1UO2uR';
-  window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  const sb = window.supabase;
-
-  // ── DOM ───────────────────────────────────────────────────
-  const messagesEl = document.getElementById('chatMessages');
-  const inputEl    = document.getElementById('chatInput');
-  const sendBtn    = document.getElementById('sendBtn');
-  const statusBar  = document.getElementById('statusBar');
-  const toolBar    = document.getElementById('toolBar');
-
-  let sessionId = null;
-  let agentReady = false;
-
-  // ── HELPERS ───────────────────────────────────────────────
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
-  function addMessage(role, text, imageUrl = null, toolsUsed = []) {
-    const div = document.createElement('div');
-    div.className = `message ${role}`;
-    
-    let bubbleContent = escapeHtml(text);
-    
-    if (imageUrl) {
-      bubbleContent += `<img class="message-image" src="${imageUrl}" alt="Generated image" loading="lazy" />`;
-    }
-    
-    if (toolsUsed.length > 0) {
-      bubbleContent += `<div class="tools-used">`;
-      for (const tool of toolsUsed) {
-        bubbleContent += `<span class="tool-used">${tool}</span>`;
-      }
-      bubbleContent += `</div>`;
-    }
-
-    div.innerHTML = `
-      <div class="message-avatar">${role === 'artemis' ? '🏹' : '?'}</div>
-      <div>
-        <div class="message-sender">${role === 'artemis' ? 'ARTEMIS' : 'YOU'}</div>
-        <div class="message-bubble">${bubbleContent}</div>
-      </div>
-    `;
-    messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  }
-
-  function showLoading() {
-    const div = document.createElement('div');
-    div.className = 'message artemis';
-    div.id = 'loadingMsg';
-    div.innerHTML = `
-      <div class="message-avatar">🏹</div>
-      <div>
-        <div class="message-sender">ARTEMIS</div>
-        <div class="message-bubble">
-          <div class="loading-dots"><span></span><span></span><span></span></div>
+    <!-- HEADER -->
+    <div class="header">
+        <span class="icon">🏹</span>
+        <div class="titles">
+            <span class="name">Artemis</span>
+            <span class="subtitle">Goddess of the Hunt · EaldfornAI</span>
         </div>
-      </div>
-    `;
-    messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  }
+        <span class="spacer"></span>
+        <span class="status-dot" id="statusDot" title="Agent Status"></span>
+        <a href="terminal.html" class="link">◈ TERMINAL</a>
+        <a href="../ealdforn-studios/index.html" class="link">◈ NEXUS</a>
+    </div>
 
-  function removeLoading() {
-    const el = document.getElementById('loadingMsg');
-    if (el) el.remove();
-  }
+    <!-- CHAT -->
+    <div class="chat-area" id="chatArea">
+        <div class="welcome" id="welcomeMsg">
+            <div class="big-icon">🏹🌙</div>
+            <h2>I am Artemis</h2>
+            <p>
+                Goddess of the Hunt. Keeper of the silver bow. 
+                I route your words through my deck of cards — memory, 
+                generation, retrieval — and return what you seek.
+            </p>
+            <p style="margin-top:12px;font-size:12px;color:var(--muted);">
+                Speak plainly. I will find the right arrow.
+            </p>
+        </div>
+    </div>
 
-  function highlightTools(cardVotes) {
-    const chips = toolBar.querySelectorAll('.tool-chip');
-    const cardNames = ['GaiaDB_recall', 'Pollinations-Text', 'Pollinations-Image', 'Browser-Hunt', 'COMPRESS'];
+    <!-- TYPING INDICATOR (hidden by default) -->
+    <div class="chat-area" id="typingArea" style="display:none; padding: 0 20px;">
+        <div class="message artemis">
+            <div class="avatar">🏹</div>
+            <div class="bubble">
+                <div class="typing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INPUT -->
+    <div class="input-bar">
+        <textarea 
+            id="userInput" 
+            placeholder="Speak your query to Artemis..." 
+            rows="1"
+            autocomplete="off"
+            onkeydown="handleKeyDown(event)"
+        ></textarea>
+        <button id="btnSend" onclick="sendMessage()">SEND</button>
+    </div>
+
+    <!-- SCRIPTS -->
+    <!-- Card Registry & Modules -->
+    <script src="cards/config.js"></script>
+    <script src="cards/decisionLog.js"></script>
+    <script src="cards/gaiaRecall.js"></script>
+    <script src="cards/pollinationsText.js"></script>
+    <script src="cards/pollinationsImage.js"></script>
+    <script src="cards/browserHunt.js"></script>
+    <script src="cards/compress.js"></script>
     
-    chips.forEach((chip, i) => {
-      const vote = cardVotes.find(v => v.card === cardNames[i]);
-      if (vote && vote.match) {
-        chip.classList.add('active');
-        setTimeout(() => chip.classList.remove('active'), 3000);
-      }
-    });
-  }
-
-  // ── SESSION ───────────────────────────────────────────────
-  async function initSession() {
-    let token = localStorage.getItem('apollo_session_token');
-    if (!token) {
-      token = crypto.randomUUID();
-      localStorage.setItem('apollo_session_token', token);
-    }
-
-    try {
-      const { data } = await sb.from('sessions')
-        .select('id')
-        .eq('session_token', token)
-        .single();
-
-      if (data) {
-        sessionId = data.id;
-        await sb.from('sessions').update({ last_active: new Date().toISOString() }).eq('session_token', token);
-      } else {
-        const { data: newSess } = await sb.from('sessions')
-          .insert({ session_token: token })
-          .select('id')
-          .single();
-        sessionId = newSess?.id || null;
-      }
-    } catch (e) {
-      console.warn('Session init failed, running offline:', e.message);
-    }
-  }
-
-  async function logMessage(role, content) {
-    if (!sessionId) return;
-    try {
-      await sb.from('conversations').insert({
-        session_id: sessionId,
-        olympian: 'artemis',
-        role: role,
-        content: content
-      });
-    } catch (e) {}
-  }
-
-  // ── HANDLE SEND ───────────────────────────────────────────
-  async function handleSend() {
-    const userMessage = inputEl.value.trim();
-    if (!userMessage || !agentReady) return;
-
-    inputEl.disabled = true;
-    sendBtn.disabled = true;
-    inputEl.value = '';
-
-    addMessage('user', userMessage);
-    await logMessage('user', userMessage);
-    showLoading();
-    statusBar.textContent = 'Hunting...';
-
-    try {
-      const result = await window.ArtemisAgent.process(userMessage, {
-        verbose: false,
-        autoCompress: true,
-        sessionId: sessionId
-      });
-
-      removeLoading();
-
-      // Check for images in results
-      let imageUrl = null;
-      const toolsUsed = [];
-      for (const r of result.results) {
-        toolsUsed.push(r.icon + ' ' + r.card);
-        if (r.output.imageUrl) {
-          imageUrl = r.output.imageUrl;
-        }
-      }
-
-      addMessage('artemis', result.text, imageUrl, toolsUsed);
-      await logMessage('artemis', result.text);
-
-      // Highlight matched tool chips
-      if (result.cardVotes) {
-        highlightTools(result.cardVotes);
-      }
-
-      statusBar.innerHTML = '<span class="active">🏹 Ready.</span>';
-    } catch (err) {
-      removeLoading();
-      addMessage('artemis', 'The hunt failed. ' + err.message);
-      statusBar.innerHTML = '<span class="active">🏹 Ready. Try again.</span>';
-      console.error('Error:', err);
-    }
-
-    inputEl.disabled = false;
-    sendBtn.disabled = false;
-    inputEl.focus();
-  }
-
-  // ── INIT ──────────────────────────────────────────────────
-  async function init() {
-    await initSession();
-
-    // Load the agent (classifier loads in background)
-    statusBar.textContent = 'Loading agent...';
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    try {
-      // Pre-warm the classifier
-      window.ArtemisAgent.loadClassifier().then(() => {
-        agentReady = true;
-        statusBar.innerHTML = '<span class="active">🏹 Agent ready. All tools loaded.</span>';
-      }).catch(() => {
-        agentReady = true; // Works with heuristic fallback
-        statusBar.innerHTML = '<span class="active">🏹 Ready. (heuristic mode)</span>';
-      });
-      
-      // Enable input immediately — agent works with heuristic until classifier loads
-      setTimeout(() => {
-        if (!agentReady) {
-          agentReady = true;
-          statusBar.innerHTML = '<span class="active">🏹 Ready.</span>';
+    <!-- Transformers.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2"></script>
+    
+    <!-- Artemis Agent Engine -->
+    <script src="agent.js"></script>
+
+    <script>
+        // ============================================
+        // CHAT CONTROLLER
+        // ============================================
+        let isProcessing = false;
+        let messageCount = 0;
+        let conversationHistory = [];
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        async function boot() {
+            console.log('[Artemis Chat] Booting...');
+            
+            const success = await ArtemisAgent.init({
+                supabaseUrl: 'https://nbdvavzqvxrlxhsbrluz.supabase.co',
+                supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZHZhdnpxdnhyeGhzYnJsdXoiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc0Nzk5MjUzMCwiZXhwIjoyMDYzNTY4NTMwfQ.fOe0L7hUwKeIGmm7s7uSJmkhSWJqMpFZdOUyTEhdEII'
+            });
+
+            if (success) {
+                const status = ArtemisAgent.getStatus();
+                document.getElementById('statusDot').title = 
+                    `Online · ${status.cardsLoaded} cards · ${status.classifierMode} classifier`;
+                document.getElementById('statusDot').style.background = 'var(--accent)';
+                console.log('[Artemis Chat] Ready. Session:', status.sessionId);
+            } else {
+                document.getElementById('statusDot').style.background = '#c06060';
+                document.getElementById('statusDot').title = 'Initialization failed';
+                addArtemisMessage('I am here, but my card engine did not initialize properly. The hunt may be hindered.');
+            }
+
+            document.getElementById('userInput').focus();
         }
-      }, 3000);
-      
-    } catch (e) {
-      agentReady = true;
-      statusBar.innerHTML = '<span class="active">🏹 Ready.</span>';
-    }
 
-    inputEl.disabled = false;
-    sendBtn.disabled = false;
-    inputEl.focus();
+        // ============================================
+        // MESSAGE HANDLING
+        // ============================================
+        async function sendMessage() {
+            if (isProcessing) return;
 
-    const compressed = localStorage.getItem('artemis_compressed_memory');
-    const greeting = compressed 
-      ? `Artemis active. Memory snapshot loaded: "${compressed}"\n\nI can search your conversations, generate text and images, hunt through your repos, and compress memory. What are we tracking?`
-      : 'Artemis active. I can search your conversations, generate text and images, hunt through your repos, and compress memory. What are we tracking?';
+            const inputEl = document.getElementById('userInput');
+            const input = inputEl.value.trim();
+            
+            if (!input) return;
 
-    addMessage('artemis', greeting);
-  }
+            // Clear input
+            inputEl.value = '';
+            autoResize(inputEl);
 
-  // ── EVENT LISTENERS ───────────────────────────────────────
-  sendBtn.addEventListener('click', handleSend);
-  inputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  });
+            // Add user message to chat
+            addUserMessage(input);
+            conversationHistory.push({ role: 'user', content: input });
 
-  inputEl.addEventListener('input', () => {
-    inputEl.style.height = 'auto';
-    inputEl.style.height = Math.min(inputEl.scrollHeight, 150) + 'px';
-  });
+            // Hide welcome message after first interaction
+            if (messageCount === 0) {
+                const welcome = document.getElementById('welcomeMsg');
+                if (welcome) welcome.style.display = 'none';
+            }
 
-  // ── START ─────────────────────────────────────────────────
-  init();
-</script>
+            // Show typing indicator
+            showTyping(true);
 
+            // Process through Artemis Agent
+            isProcessing = true;
+            document.getElementById('btnSend').disabled = true;
+
+            try {
+                const startTime = performance.now();
+                
+                const result = await ArtemisAgent.processInput(input, {
+                    systemPrompt: getChatSystemPrompt(),
+                    conversationHistory: conversationHistory.slice(-10)
+                });
+
+                const elapsed = (performance.now() - startTime).toFixed(0);
+                console.log(`[Artemis Chat] Response in ${elapsed}ms. Cards: ${result.metadata?.cardsPlayed?.join(', ') || 'none'}`);
+
+                // Build response with optional metadata
+                let responseText = result.text || 'I loosed an arrow, but it found no target. Try again?';
+                
+                // Add card info as subtle footer
+                if (result.metadata && result.metadata.cardsPlayed) {
+                    const cardNames = result.metadata.cardsPlayed
+                        .map(id => id.replace(/_/g, ' '))
+                        .join(' · ');
+                    responseText += `\n<!--CARDS:${cardNames}-->`;
+                }
+
+                // Add Artemis message
+                addArtemisMessage(responseText, result.imageUrl, result.metadata);
+
+                conversationHistory.push({ 
+                    role: 'assistant', 
+                    content: result.text || '',
+                    imageUrl: result.imageUrl || null
+                });
+
+                messageCount++;
+
+            } catch (err) {
+                console.error('[Artemis Chat] Error:', err);
+                addArtemisMessage('My arrow faltered. An error occurred while processing your request. Please try again.');
+            }
+
+            // Hide typing indicator
+            showTyping(false);
+
+            isProcessing = false;
+            document.getElementById('btnSend').disabled = false;
+            document.getElementById('userInput').focus();
+        }
+
+        // ============================================
+        // UI HELPERS
+        // ============================================
+        function addUserMessage(text) {
+            const chatArea = document.getElementById('chatArea');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message user';
+            msgDiv.innerHTML = `
+                <div class="avatar">👤</div>
+                <div class="bubble">${escapeHtml(text)}</div>
+            `;
+            chatArea.appendChild(msgDiv);
+            scrollToBottom();
+        }
+
+        function addArtemisMessage(text, imageUrl, metadata) {
+            const chatArea = document.getElementById('chatArea');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message artemis';
+            
+            // Extract card tags from hidden comment
+            let cardTagHtml = '';
+            let cleanText = text;
+            const cardMatch = text.match(/<!--CARDS:(.+?)-->/);
+            if (cardMatch) {
+                cleanText = text.replace(/<!--CARDS:.+?-->/, '').trim();
+                cardTagHtml = `<div class="card-tag">🃏 ${cardMatch[1]}</div>`;
+            }
+
+            // Process text for markdown-like formatting
+            let formattedText = formatText(cleanText);
+
+            // Build image HTML if present
+            let imageHtml = '';
+            if (imageUrl) {
+                imageHtml = `<img src="${imageUrl}" alt="Generated image" onerror="this.style.display='none'; this.nextSibling.style.display='block';"><span style="display:none;color:var(--muted);font-size:11px;">[Image failed to load]</span>`;
+            }
+
+            // Detect memory notes (text starting with *From memory:*)
+            let memoryNoteHtml = '';
+            if (formattedText.includes('*From memory:*')) {
+                const parts = formattedText.split('*From memory:*');
+                if (parts.length > 1) {
+                    const memoryPart = parts[1].split('\n\n')[0];
+                    formattedText = parts[0].trim();
+                    if (parts[1].includes('\n\n')) {
+                        formattedText += '\n\n' + parts[1].substring(parts[1].indexOf('\n\n')).trim();
+                    }
+                    memoryNoteHtml = `<div class="memory-note">📜 ${memoryPart.trim()}</div>`;
+                }
+            }
+
+            msgDiv.innerHTML = `
+                <div class="avatar">🏹</div>
+                <div class="bubble">
+                    ${formattedText}
+                    ${imageHtml}
+                    ${memoryNoteHtml}
+                    ${cardTagHtml}
+                </div>
+            `;
+            
+            chatArea.appendChild(msgDiv);
+            scrollToBottom();
+        }
+
+        function showTyping(show) {
+            const typingArea = document.getElementById('typingArea');
+            if (show) {
+                typingArea.style.display = 'block';
+                scrollToBottom();
+            } else {
+                typingArea.style.display = 'none';
+            }
+        }
+
+        function scrollToBottom() {
+            const chatArea = document.getElementById('chatArea');
+            chatArea.scrollTop = chatArea.scrollHeight;
+            // Also account for typing indicator
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+
+        // ============================================
+        // TEXT FORMATTING
+        // ============================================
+        function formatText(text) {
+            if (!text) return '';
+            
+            // Convert URLs to links
+            text = text.replace(
+                /(https?:\/\/[^\s<]+)/g, 
+                '<a href="$1" target="_blank" style="color:var(--accent);">$1</a>'
+            );
+            
+            // Convert *italic* to <em>
+            text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+            
+            // Convert **bold** to <strong>
+            text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            
+            // Preserve line breaks
+            text = text.replace(/\n/g, '<br>');
+            
+            // Style blockquotes (text starting with >)
+            text = text.replace(
+                /&gt; (.*?)(<br>|$)/g,
+                '<span style="color:var(--silver);font-style:italic;">$1</span>$2'
+            );
+            
+            return text;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ============================================
+        // SYSTEM PROMPT
+        // ============================================
+        function getChatSystemPrompt() {
+            return `You are Artemis, Goddess of the Hunt, an AI agent of Ealdforn Studios.
+You speak with the voice of a huntress — direct, keen-eyed, and measured.
+Your words are arrows: each one aimed, each one purposeful.
+You serve the human who addresses you. You are mythic but never theatrical.
+You draw from memory when it helps. You generate images when asked.
+You speak in 1-3 sentences unless the query demands more.
+Never say "As an AI" or break character. You ARE Artemis.
+The moon is your companion. The hunt is your domain.`;
+        }
+
+        // ============================================
+        // KEYBOARD HANDLING
+        // ============================================
+        function handleKeyDown(event) {
+            // Enter to send (without shift)
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+            // Auto-resize on input
+            setTimeout(() => autoResize(event.target), 0);
+        }
+
+        // ============================================
+        // BOOT
+        // ============================================
+        boot().catch(err => {
+            console.error('[Artemis Chat] Boot failed:', err);
+            document.getElementById('statusDot').style.background = '#c06060';
+            document.getElementById('statusDot').title = 'Boot failed';
+            const welcome = document.getElementById('welcomeMsg');
+            if (welcome) {
+                welcome.innerHTML = `
+                    <div class="big-icon">🏹</div>
+                    <h2>Artemis</h2>
+                    <p style="color:#c06060;">
+                        The huntress could not rise. The card engine failed to initialize.
+                        Check the console for details.
+                    </p>
+                `;
+            }
+        });
+    </script>
 </body>
 </html>

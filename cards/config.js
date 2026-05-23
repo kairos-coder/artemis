@@ -49,7 +49,23 @@ const ARTEMIS_CARD_DECK = [
         autoTrigger: true,
         cardFile: 'memoryManager.js'
     },
-    
+        {
+        id: 'model_deck',
+        name: 'Model Deck',
+        icon: '🧩',
+        category: 'meta',
+        description: 'Registry of all loaded browser models — allows cards to request specialized inference',
+        matchPatterns: [],
+        defaultWeight: 1.0,
+        requires: [],
+        produces: ['model_inference'],
+        timeout: 5000,
+        retryOnFail: false,
+        maxRetries: 1,
+        execute: null,
+        autoTrigger: true,
+        cardFile: 'modelDeck.js'
+    },
     {
         id: 'card_voter',
         name: 'Card Voter',

@@ -19,13 +19,7 @@
             --font-body: 'Georgia', 'Times New Roman', serif;
             --font-mono: 'Courier New', 'SF Mono', monospace;
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: var(--bg);
             color: var(--text);
@@ -33,12 +27,10 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            background-image: 
+            background-image:
                 radial-gradient(ellipse at 50% 0%, rgba(126,184,160,0.04) 0%, transparent 60%),
                 radial-gradient(ellipse at 80% 100%, rgba(90,144,112,0.03) 0%, transparent 50%);
         }
-
-        /* HEADER */
         .header {
             background: var(--surface);
             border-bottom: 1px solid var(--border);
@@ -48,13 +40,8 @@
             gap: 12px;
             flex-shrink: 0;
         }
-        .header .icon {
-            font-size: 28px;
-        }
-        .header .titles {
-            display: flex;
-            flex-direction: column;
-        }
+        .header .icon { font-size: 28px; }
+        .header .titles { display: flex; flex-direction: column; }
         .header .name {
             font-size: 18px;
             color: var(--accent-glow);
@@ -68,9 +55,7 @@
             text-transform: uppercase;
             font-family: var(--font-mono);
         }
-        .header .spacer {
-            flex: 1;
-        }
+        .header .spacer { flex: 1; }
         .header .link {
             font-size: 11px;
             color: var(--muted);
@@ -82,10 +67,7 @@
             border-radius: 3px;
             transition: all 0.2s;
         }
-        .header .link:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-        }
+        .header .link:hover { border-color: var(--accent); color: var(--accent); }
         .header .status-dot {
             width: 7px;
             height: 7px;
@@ -93,8 +75,6 @@
             background: var(--accent);
             box-shadow: 0 0 6px rgba(126,184,160,0.5);
         }
-
-        /* CHAT AREA */
         .chat-area {
             flex: 1;
             overflow-y: auto;
@@ -103,8 +83,6 @@
             flex-direction: column;
             gap: 16px;
         }
-
-        /* MESSAGE BUBBLES */
         .message {
             display: flex;
             gap: 10px;
@@ -115,14 +93,8 @@
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .message.user {
-            align-self: flex-end;
-            flex-direction: row-reverse;
-        }
-        .message.artemis {
-            align-self: flex-start;
-        }
-
+        .message.user { align-self: flex-end; flex-direction: row-reverse; }
+        .message.artemis { align-self: flex-start; }
         .avatar {
             width: 36px;
             height: 36px;
@@ -133,14 +105,11 @@
             font-size: 18px;
             flex-shrink: 0;
         }
-        .message.user .avatar {
-            background: var(--border);
-        }
+        .message.user .avatar { background: var(--border); }
         .message.artemis .avatar {
             background: #1a2a24;
             border: 1px solid var(--green);
         }
-
         .bubble {
             padding: 12px 16px;
             border-radius: 12px;
@@ -179,13 +148,7 @@
             letter-spacing: 0.5px;
             margin-top: 4px;
         }
-
-        /* TYPING INDICATOR */
-        .typing-indicator {
-            display: flex;
-            gap: 4px;
-            padding: 8px 0;
-        }
+        .typing-indicator { display: flex; gap: 4px; padding: 8px 0; }
         .typing-indicator span {
             width: 6px;
             height: 6px;
@@ -199,8 +162,6 @@
             0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
             30% { opacity: 1; transform: scale(1.1); }
         }
-
-        /* INPUT BAR */
         .input-bar {
             background: var(--surface);
             border-top: 1px solid var(--border);
@@ -225,13 +186,8 @@
             transition: border-color 0.2s;
             line-height: 1.5;
         }
-        .input-bar textarea:focus {
-            border-color: var(--accent);
-        }
-        .input-bar textarea::placeholder {
-            color: #3a4a40;
-            font-style: italic;
-        }
+        .input-bar textarea:focus { border-color: var(--accent); }
+        .input-bar textarea::placeholder { color: #3a4a40; font-style: italic; }
         .input-bar button {
             background: var(--accent);
             border: none;
@@ -256,17 +212,12 @@
             cursor: not-allowed;
             box-shadow: none;
         }
-
-        /* WELCOME */
         .welcome {
             text-align: center;
             padding: 40px 20px;
             color: var(--silver);
         }
-        .welcome .big-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-        }
+        .welcome .big-icon { font-size: 48px; margin-bottom: 12px; }
         .welcome h2 {
             color: var(--accent-glow);
             font-size: 22px;
@@ -279,13 +230,9 @@
             margin: 0 auto;
             line-height: 1.7;
         }
-
-        /* SCROLLBAR */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-        /* MOBILE */
         @media (max-width: 600px) {
             .message { max-width: 95%; }
             .bubble { font-size: 14px; }
@@ -297,7 +244,6 @@
 </head>
 <body>
 
-    <!-- HEADER -->
     <div class="header">
         <span class="icon">🏹</span>
         <div class="titles">
@@ -310,48 +256,31 @@
         <a href="../ealdforn-studios/index.html" class="link">◈ NEXUS</a>
     </div>
 
-    <!-- CHAT -->
     <div class="chat-area" id="chatArea">
         <div class="welcome" id="welcomeMsg">
             <div class="big-icon">🏹🌙</div>
             <h2>I am Artemis</h2>
-            <p>
-                Goddess of the Hunt. Keeper of the silver bow. 
-                I route your words through my deck of cards — memory, 
-                generation, retrieval — and return what you seek.
-            </p>
-            <p style="margin-top:12px;font-size:12px;color:var(--muted);">
-                Speak plainly. I will find the right arrow.
-            </p>
+            <p>Goddess of the Hunt. Keeper of the silver bow. I route your words through my deck of cards — memory, generation, retrieval — and return what you seek.</p>
+            <p style="margin-top:12px;font-size:12px;color:var(--muted);">Speak plainly. I will find the right arrow.</p>
         </div>
     </div>
 
-    <!-- TYPING INDICATOR (hidden by default) -->
-    <div class="chat-area" id="typingArea" style="display:none; padding: 0 20px;">
+    <div class="chat-area" id="typingArea" style="display:none; padding:0 20px;">
         <div class="message artemis">
             <div class="avatar">🏹</div>
             <div class="bubble">
-                <div class="typing-indicator">
-                    <span></span><span></span><span></span>
-                </div>
+                <div class="typing-indicator"><span></span><span></span><span></span></div>
             </div>
         </div>
     </div>
 
-    <!-- INPUT -->
     <div class="input-bar">
-        <textarea 
-            id="userInput" 
-            placeholder="Speak your query to Artemis..." 
-            rows="1"
-            autocomplete="off"
-            onkeydown="handleKeyDown(event)"
-        ></textarea>
+        <textarea id="userInput" placeholder="Speak your query to Artemis..." rows="1"
+            autocomplete="off" onkeydown="handleKeyDown(event)"></textarea>
         <button id="btnSend" onclick="sendMessage()">SEND</button>
     </div>
 
-    <!-- SCRIPTS -->
-    <!-- Card Registry & Modules -->
+    <!-- SCRIPTS — Single source of truth load order -->
     <script src="cards/config.js"></script>
     <script src="cards/decisionLog.js"></script>
     <script src="cards/gaiaRecall.js"></script>
@@ -359,297 +288,169 @@
     <script src="cards/pollinationsImage.js"></script>
     <script src="cards/browserHunt.js"></script>
     <script src="cards/compress.js"></script>
-    
-    <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Transformers.js -->
-    <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2"></script>
-    
-    <!-- Artemis Agent Engine -->
     <script src="agent.js"></script>
 
     <script>
-        // ============================================
-        // CHAT CONTROLLER
-        // ============================================
         let isProcessing = false;
         let messageCount = 0;
         let conversationHistory = [];
 
-        // ============================================
-        // INITIALIZATION
-        // ============================================
         async function boot() {
             console.log('[Artemis Chat] Booting...');
-            
-            const success = await ArtemisAgent.init({
-                supabaseUrl: 'https://nbdvavzqvxrlxhsbrluz.supabase.co',
-                supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZHZhdnpxdnhyeGhzYnJsdXoiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc0Nzk5MjUzMCwiZXhwIjoyMDYzNTY4NTMwfQ.fOe0L7hUwKeIGmm7s7uSJmkhSWJqMpFZdOUyTEhdEII'
-            });
+            const success = await ArtemisAgent.init();
 
             if (success) {
                 const status = ArtemisAgent.getStatus();
-                document.getElementById('statusDot').title = 
-                    `Online · ${status.cardsLoaded} cards · ${status.classifierMode} classifier`;
+                document.getElementById('statusDot').title =
+                    'Online · ' + status.cardsLoaded + ' cards · ' + status.classifierMode;
                 document.getElementById('statusDot').style.background = 'var(--accent)';
-                console.log('[Artemis Chat] Ready. Session:', status.sessionId);
+                console.log('[Artemis Chat] Ready.');
             } else {
                 document.getElementById('statusDot').style.background = '#c06060';
-                document.getElementById('statusDot').title = 'Initialization failed';
-                addArtemisMessage('I am here, but my card engine did not initialize properly. The hunt may be hindered.');
+                document.getElementById('statusDot').title = 'Init failed';
+                addArtemisMessage('I am here, but my card engine did not rise properly. The hunt may be hindered.');
             }
-
             document.getElementById('userInput').focus();
         }
 
-        // ============================================
-        // MESSAGE HANDLING
-        // ============================================
         async function sendMessage() {
             if (isProcessing) return;
-
             const inputEl = document.getElementById('userInput');
             const input = inputEl.value.trim();
-            
             if (!input) return;
 
-            // Clear input
             inputEl.value = '';
             autoResize(inputEl);
-
-            // Add user message to chat
             addUserMessage(input);
             conversationHistory.push({ role: 'user', content: input });
 
-            // Hide welcome message after first interaction
             if (messageCount === 0) {
-                const welcome = document.getElementById('welcomeMsg');
-                if (welcome) welcome.style.display = 'none';
+                const w = document.getElementById('welcomeMsg');
+                if (w) w.style.display = 'none';
             }
 
-            // Show typing indicator
             showTyping(true);
-
-            // Process through Artemis Agent
             isProcessing = true;
             document.getElementById('btnSend').disabled = true;
 
             try {
                 const startTime = performance.now();
-                
                 const result = await ArtemisAgent.processInput(input, {
-                    systemPrompt: getChatSystemPrompt(),
                     conversationHistory: conversationHistory.slice(-10)
                 });
-
                 const elapsed = (performance.now() - startTime).toFixed(0);
-                console.log(`[Artemis Chat] Response in ${elapsed}ms. Cards: ${result.metadata?.cardsPlayed?.join(', ') || 'none'}`);
+                console.log('[Artemis Chat] ' + elapsed + 'ms — ' + (result.metadata?.cardsPlayed?.join(', ') || 'none'));
 
-                // Build response with optional metadata
                 let responseText = result.text || 'I loosed an arrow, but it found no target. Try again?';
-                
-                // Add card info as subtle footer
-                if (result.metadata && result.metadata.cardsPlayed) {
-                    const cardNames = result.metadata.cardsPlayed
-                        .map(id => id.replace(/_/g, ' '))
-                        .join(' · ');
-                    responseText += `\n<!--CARDS:${cardNames}-->`;
+                if (result.metadata?.cardsPlayed) {
+                    responseText += '\n<!--CARDS:' + result.metadata.cardsPlayed.join(',') + '-->';
                 }
 
-                // Add Artemis message
                 addArtemisMessage(responseText, result.imageUrl, result.metadata);
-
-                conversationHistory.push({ 
-                    role: 'assistant', 
-                    content: result.text || '',
-                    imageUrl: result.imageUrl || null
-                });
-
+                conversationHistory.push({ role: 'assistant', content: result.text || '', imageUrl: result.imageUrl || null });
                 messageCount++;
 
             } catch (err) {
                 console.error('[Artemis Chat] Error:', err);
-                addArtemisMessage('My arrow faltered. An error occurred while processing your request. Please try again.');
+                addArtemisMessage('My arrow faltered. An error occurred. Please try again.');
             }
 
-            // Hide typing indicator
             showTyping(false);
-
             isProcessing = false;
             document.getElementById('btnSend').disabled = false;
             document.getElementById('userInput').focus();
         }
 
-        // ============================================
-        // UI HELPERS
-        // ============================================
         function addUserMessage(text) {
-            const chatArea = document.getElementById('chatArea');
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'message user';
-            msgDiv.innerHTML = `
-                <div class="avatar">👤</div>
-                <div class="bubble">${escapeHtml(text)}</div>
-            `;
-            chatArea.appendChild(msgDiv);
+            const msg = document.createElement('div');
+            msg.className = 'message user';
+            msg.innerHTML = '<div class="avatar">👤</div><div class="bubble">' + escapeHtml(text) + '</div>';
+            document.getElementById('chatArea').appendChild(msg);
             scrollToBottom();
         }
 
         function addArtemisMessage(text, imageUrl, metadata) {
-            const chatArea = document.getElementById('chatArea');
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'message artemis';
-            
-            // Extract card tags from hidden comment
+            const msg = document.createElement('div');
+            msg.className = 'message artemis';
+
             let cardTagHtml = '';
             let cleanText = text;
             const cardMatch = text.match(/<!--CARDS:(.+?)-->/);
             if (cardMatch) {
                 cleanText = text.replace(/<!--CARDS:.+?-->/, '').trim();
-                cardTagHtml = `<div class="card-tag">🃏 ${cardMatch[1]}</div>`;
+                cardTagHtml = '<div class="card-tag">🃏 ' + cardMatch[1].replace(/,/g, ' · ') + '</div>';
             }
 
-            // Process text for markdown-like formatting
             let formattedText = formatText(cleanText);
+            let imageHtml = imageUrl
+                ? '<img src="' + imageUrl + '" alt="Generated" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\';"><span style="display:none;color:var(--muted);font-size:11px;">[Image failed to load]</span>'
+                : '';
 
-            // Build image HTML if present
-            let imageHtml = '';
-            if (imageUrl) {
-                imageHtml = `<img src="${imageUrl}" alt="Generated image" onerror="this.style.display='none'; this.nextSibling.style.display='block';"><span style="display:none;color:var(--muted);font-size:11px;">[Image failed to load]</span>`;
-            }
-
-            // Detect memory notes (text starting with *From memory:*)
             let memoryNoteHtml = '';
             if (formattedText.includes('*From memory:*')) {
                 const parts = formattedText.split('*From memory:*');
                 if (parts.length > 1) {
-                    const memoryPart = parts[1].split('\n\n')[0];
+                    const memoryPart = parts[1].split('<br><br>')[0];
                     formattedText = parts[0].trim();
-                    if (parts[1].includes('\n\n')) {
-                        formattedText += '\n\n' + parts[1].substring(parts[1].indexOf('\n\n')).trim();
+                    if (parts[1].includes('<br><br>')) {
+                        formattedText += '<br><br>' + parts[1].substring(parts[1].indexOf('<br><br>') + 8).trim();
                     }
-                    memoryNoteHtml = `<div class="memory-note">📜 ${memoryPart.trim()}</div>`;
+                    memoryNoteHtml = '<div class="memory-note">📜 ' + memoryPart.trim() + '</div>';
                 }
             }
 
-            msgDiv.innerHTML = `
-                <div class="avatar">🏹</div>
-                <div class="bubble">
-                    ${formattedText}
-                    ${imageHtml}
-                    ${memoryNoteHtml}
-                    ${cardTagHtml}
-                </div>
-            `;
-            
-            chatArea.appendChild(msgDiv);
+            msg.innerHTML = '<div class="avatar">🏹</div><div class="bubble">' +
+                formattedText + imageHtml + memoryNoteHtml + cardTagHtml + '</div>';
+
+            document.getElementById('chatArea').appendChild(msg);
             scrollToBottom();
         }
 
         function showTyping(show) {
-            const typingArea = document.getElementById('typingArea');
-            if (show) {
-                typingArea.style.display = 'block';
-                scrollToBottom();
-            } else {
-                typingArea.style.display = 'none';
-            }
+            document.getElementById('typingArea').style.display = show ? 'block' : 'none';
+            if (show) scrollToBottom();
         }
 
         function scrollToBottom() {
-            const chatArea = document.getElementById('chatArea');
-            chatArea.scrollTop = chatArea.scrollHeight;
-            // Also account for typing indicator
-            window.scrollTo(0, document.body.scrollHeight);
+            const area = document.getElementById('chatArea');
+            area.scrollTop = area.scrollHeight;
         }
 
-        function autoResize(textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
         }
 
-        // ============================================
-        // TEXT FORMATTING
-        // ============================================
         function formatText(text) {
             if (!text) return '';
-            
-            // Convert URLs to links
-            text = text.replace(
-                /(https?:\/\/[^\s<]+)/g, 
-                '<a href="$1" target="_blank" style="color:var(--accent);">$1</a>'
-            );
-            
-            // Convert *italic* to <em>
-            text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-            
-            // Convert **bold** to <strong>
+            text = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:var(--accent);">$1</a>');
             text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-            
-            // Preserve line breaks
+            text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
             text = text.replace(/\n/g, '<br>');
-            
-            // Style blockquotes (text starting with >)
-            text = text.replace(
-                /&gt; (.*?)(<br>|$)/g,
-                '<span style="color:var(--silver);font-style:italic;">$1</span>$2'
-            );
-            
+            text = text.replace(/&gt; (.*?)(<br>|$)/g, '<span style="color:var(--silver);font-style:italic;">$1</span>$2');
             return text;
         }
 
         function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            const d = document.createElement('div');
+            d.textContent = text;
+            return d.innerHTML;
         }
 
-        // ============================================
-        // SYSTEM PROMPT
-        // ============================================
-        function getChatSystemPrompt() {
-            return `You are Artemis, Goddess of the Hunt, an AI agent of Ealdforn Studios.
-You speak with the voice of a huntress — direct, keen-eyed, and measured.
-Your words are arrows: each one aimed, each one purposeful.
-You serve the human who addresses you. You are mythic but never theatrical.
-You draw from memory when it helps. You generate images when asked.
-You speak in 1-3 sentences unless the query demands more.
-Never say "As an AI" or break character. You ARE Artemis.
-The moon is your companion. The hunt is your domain.`;
-        }
-
-        // ============================================
-        // KEYBOARD HANDLING
-        // ============================================
         function handleKeyDown(event) {
-            // Enter to send (without shift)
             if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
                 sendMessage();
             }
-            // Auto-resize on input
             setTimeout(() => autoResize(event.target), 0);
         }
 
-        // ============================================
-        // BOOT
-        // ============================================
         boot().catch(err => {
             console.error('[Artemis Chat] Boot failed:', err);
             document.getElementById('statusDot').style.background = '#c06060';
-            document.getElementById('statusDot').title = 'Boot failed';
-            const welcome = document.getElementById('welcomeMsg');
-            if (welcome) {
-                welcome.innerHTML = `
-                    <div class="big-icon">🏹</div>
-                    <h2>Artemis</h2>
-                    <p style="color:#c06060;">
-                        The huntress could not rise. The card engine failed to initialize.
-                        Check the console for details.
-                    </p>
-                `;
-            }
+            const w = document.getElementById('welcomeMsg');
+            if (w) w.innerHTML = '<div class="big-icon">🏹</div><h2>Artemis</h2><p style="color:#c06060;">The huntress could not rise. Check console.</p>';
         });
     </script>
 </body>

@@ -1,315 +1,298 @@
 // ============================================
-// ARTEMIS CARD REGISTRY — EaldfornAI Core
+// ARTEMIS CARD REGISTRY v3.0 — Huntress Engine
 // ============================================
-// Every card Artemis can play. 
-// New cards are added here and automatically 
-// become available to the router.
+// No Pollinations. No text generation APIs.
+// Artemis hunts data sources: GaiaDB, APIs, files, memory.
+// Every card hunts. Every response is assembled from quarry.
 // ============================================
 
-const ARTEMIS_CARD_DECK = [
+var ARTEMIS_CARD_DECK = [
+    // ═══════════════ MEMORY CARDS ═══════════════
     {
         id: 'gaia_recall',
         name: 'GaiaDB Recall',
         icon: '📜',
         category: 'memory',
-        description: 'Search GaiaDB for past conversations and stored knowledge',
+        description: 'Hunts GaiaDB for past conversations and stored knowledge',
+        cardFile: 'gaiaRecall.js',
+        defaultWeight: 0.7,
         matchPatterns: [
             'remember', 'recall', 'what did', 'past', 'history',
             'last time', 'previous', 'stored', 'memory', 'look up',
-            'find in', 'search db', 'what do you know about',
-            'what do you know', 'what do you remember',
-            'what have you learned', 'your memory',
-            'tell me everything', 'summarize what you know',
-            'what do you have on', 'recall everything'
+            'find in db', 'what do you know about', 'what do you know',
+            'what do you remember', 'what have you learned',
+            'your memory', 'tell me everything', 'summarize what you know',
+            'what do you have on', 'recall everything', 'track', 'trail', 'scent'
         ],
-        // Negative patterns: if ANY of these are present, this card is penalized
-        negativePatterns: [],
-        defaultWeight: 0.7,
+        negativePatterns: [
+            'forget', 'delete', 'clear memory', 'erase'
+        ],
         requires: ['supabase_client'],
-        produces: ['memory_context'],
-        timeout: 3000,
+        produces: ['gaia_results'],
+        timeout: 10000,
         retryOnFail: true,
-        maxRetries: 2,
-        execute: null,
-        cardFile: 'gaiaRecall.js'
+        maxRetries: 2
     },
-    
+
     {
         id: 'memory_manager',
         name: 'Memory Manager',
         icon: '🧿',
         category: 'meta',
-        description: 'LocalDB cache, memory graph, session timeout with GaiaDB summary push',
-        matchPatterns: [],
-        negativePatterns: [],
+        description: 'LocalDB cache, memory graph, session state management',
+        cardFile: 'memoryManager.js',
         defaultWeight: 1.0,
+        matchPatterns: [
+            'cache', 'stored', 'local', 'saved', 'session data', 'storage'
+        ],
+        negativePatterns: [],
         requires: ['supabase_client'],
         produces: ['memory_cache', 'graph_update', 'session_summary'],
         timeout: 5000,
         retryOnFail: false,
         maxRetries: 1,
-        execute: null,
-        autoTrigger: true,
-        cardFile: 'memoryManager.js'
+        autoTrigger: true
     },
-    
+
+    // ═══════════════ RETRIEVAL CARDS ═══════════════
     {
-        id: 'model_deck',
-        name: 'Model Deck',
-        icon: '🧩',
-        category: 'meta',
-        description: 'Registry of loaded browser models — reserved for future cross-Olympian model sharing',
-        matchPatterns: [],
-        negativePatterns: [],
-        defaultWeight: 1.0,
-        requires: [],
-        produces: ['model_inference'],
-        timeout: 5000,
-        retryOnFail: false,
-        maxRetries: 1,
-        execute: null,
-        autoTrigger: false,
-        cardFile: 'modelDeck.js'
-    },
-    
-    {
-        id: 'card_voter',
-        name: 'Card Voter',
-        icon: '🧠',
-        category: 'meta',
-        description: 'Heuristic card voting engine — no external model required',
-        matchPatterns: [],
-        negativePatterns: [],
-        defaultWeight: 1.0,
-        requires: [],
-        produces: ['card_votes'],
-        timeout: 1000,
-        retryOnFail: false,
-        maxRetries: 0,
-        execute: null,
-        autoTrigger: false,
-        cardFile: 'cardVoter.js'
-    },
-    
-    {
-        id: 'text_generation',
-        name: 'Text Generation',
-        icon: '💬',
-        category: 'generation',
-        description: 'Tiered text gen: Pollinations → Scripted fallback',
+        id: 'api_hunt',
+        name: 'API Hunt',
+        icon: '🏹',
+        category: 'retrieval',
+        description: 'Hunts free APIs — Wikipedia, OpenLibrary, Dictionary, Quotable, Weather',
+        cardFile: 'apiHunt.js',
+        defaultWeight: 0.75,
         matchPatterns: [
-            'hello', 'hi', 'hey', "what's up", 'how are you', 'how is it going',
-            'how\'s it going', 'good morning', 'good evening',
-            'explain', 'tell me', 'what is', 'how to', 'why',
-            'describe', 'think', 'help', 'who are you', 'what are you',
-            'thanks', 'thank you', 'please',
-            'status', 'audit', 'report', 'cards', 'deck', 'weights',
-            'history', 'recent', 'help',
-            'your programming', 'your code', 'your tools', 'your architecture',
-            'improve you', 'how you work', 'your system'
+            'what is', 'define', 'who is', 'search', 'find',
+            'look up', 'wiki', 'wikipedia', 'dictionary', 'meaning',
+            'book', 'author', 'quote', 'weather', 'temperature',
+            'information', 'about', 'tell me about', 'explain',
+            'how does', 'how do', 'why is', 'why does',
+            'hunt', 'track down', 'locate', 'discover'
         ],
         negativePatterns: [
-            'generate image', 'create image', 'make an image', 'draw me',
-            'show me a picture', 'visualize', 'render', 'image of', 'picture of'
+            'code', 'file', 'repo', 'repository', 'memory', 'remember',
+            'generate image', 'create image', 'draw'
         ],
-        defaultWeight: 0.55,
         requires: [],
-        produces: ['text_output'],
-        timeout: 60000,
-        retryOnFail: false,
-        maxRetries: 1,
-        execute: null,
-        cardFile: 'textGeneration.js'
+        produces: ['api_results'],
+        timeout: 15000,
+        retryOnFail: true,
+        maxRetries: 2
     },
-    {
-        id: 'pollinations_image',
-        name: 'Pollinations Image',
-        icon: '🎨',
-        category: 'generation',
-        description: 'Generate images via Pollinations.ai — only when explicitly requested',
-        matchPatterns: [
-            'generate an image', 'create an image', 'make an image',
-            'generate image', 'create image', 'make image',
-            'draw me a', 'draw a', 'show me a picture',
-            'visualize this', 'render an image', 'render a',
-            'image of a', 'picture of a', 'photo of a',
-            'art of a', 'illustration of', 'depict',
-            'generate a picture', 'create a picture',
-            'show me what', 'what does it look like'
-        ],
-        negativePatterns: [
-            'how', 'what', 'why', 'when', 'where', 'who',
-            'hello', 'hi', 'hey', 'thanks', 'status', 'help',
-            'your', 'you', 'memory', 'recall', 'remember',
-            'compress', 'hunt', 'search', 'find',
-            'code', 'programming', 'system', 'card', 'deck'
-        ],
-        defaultWeight: 0.35,
-        requires: [],
-        produces: ['image_output', 'image_url'],
-        timeout: 20000,
-        retryOnFail: false,
-        maxRetries: 1,
-        execute: null,
-        cardFile: 'pollinationsImage.js'
-    },
+
     {
         id: 'browser_hunt',
         name: 'Browser Hunt',
-        icon: '🏹',
+        icon: '🔍',
         category: 'retrieval',
-        description: 'Hunt through kairos-coder repos — reads HTML, JS, CSS, MD, and JSON files',
+        description: 'Hunts repository files — HTML, JS, CSS, MD, JSON',
+        cardFile: 'browserHunt.js',
+        defaultWeight: 0.65,
         matchPatterns: [
+            'file', 'code', 'repo', 'repository', 'script',
+            'html', 'css', 'javascript', 'readme', 'source',
+            'project', 'folder', 'directory', 'browse',
+            'show me the', 'open', 'scan', 'search files',
             'hunt for', 'search for', 'find in', 'look for',
-            'browser hunt', 'search the repos', 'hunt across',
-            'find across', 'search all projects', 'hunt the repos',
+            'hunt across', 'find across', 'search all projects',
             'find in my code', 'search my code', 'find file',
             'where is the code', 'find in repo'
         ],
         negativePatterns: [
-            'generate image', 'create image', 'draw',
-            'hello', 'hi', 'hey', 'thanks', 'status'
+            'web', 'internet', 'online', 'wikipedia', 'dictionary',
+            'generate image', 'create image', 'draw'
         ],
-        defaultWeight: 0.3,
         requires: [],
-        produces: ['web_context', 'fetched_data'],
+        produces: ['file_results', 'web_context'],
         timeout: 15000,
         retryOnFail: true,
-        maxRetries: 2,
-        execute: null,
-        cardFile: 'browserHunt.js'
+        maxRetries: 2
     },
+
+    // ═══════════════ CORRELATION CARDS ═══════════════
+    {
+        id: 'card_voter',
+        name: 'Card Voter',
+        icon: '🗳️',
+        category: 'meta',
+        description: 'Correlates card outputs and identifies consensus patterns across hunt results',
+        cardFile: 'cardVoter.js',
+        defaultWeight: 0.55,
+        matchPatterns: [
+            'compare', 'correlate', 'connect', 'link', 'related',
+            'pattern', 'between', 'across', 'overlap', 'match'
+        ],
+        negativePatterns: [],
+        requires: [],
+        produces: ['card_votes', 'correlation_data'],
+        timeout: 8000,
+        retryOnFail: false,
+        maxRetries: 0,
+        autoTrigger: true
+    },
+
     {
         id: 'compress',
         name: 'COMPRESS',
         icon: '🗜️',
         category: 'memory',
-        description: 'Extract patterns from conversation, build Ealdforn compression token, write to GaiaDB, update weights',
+        description: 'Pattern extraction, Ealdforn compression token, GaiaDB write',
+        cardFile: 'compress.js',
+        defaultWeight: 0.6,
         matchPatterns: [
             'compress', 'save this', 'remember this', 'store',
             'log this', 'note this', 'keep this', 'archive', 'record',
-            'pattern', 'learn', 'update memory'
+            'pattern', 'learn', 'update memory', 'summarize', 'condense'
         ],
         negativePatterns: [],
-        defaultWeight: 0.6,
         requires: ['supabase_client'],
         produces: ['compressed_memory', 'pattern_update', 'ealdforn_token'],
         timeout: 10000,
         retryOnFail: true,
-        maxRetries: 2,
-        execute: null,
-        cardFile: 'compress.js'
+        maxRetries: 2
     },
+
+    // ═══════════════ RESPONSE CARDS ═══════════════
+    {
+        id: 'status_report',
+        name: 'Status Report',
+        icon: '📊',
+        category: 'response',
+        description: 'Reports Artemis current state — cards, session, recent hunts',
+        cardFile: 'statusReport.js',
+        defaultWeight: 0.5,
+        matchPatterns: [
+            'status', 'state', 'report', 'how are you', 'what can you do',
+            'capabilities', 'cards', 'deck', 'quiver', 'ready',
+            'health', 'check', 'diagnostic', 'audit', 'inventory',
+            'history', 'recent'
+        ],
+        negativePatterns: [],
+        requires: [],
+        produces: ['memory_context'],
+        timeout: 5000,
+        retryOnFail: false,
+        maxRetries: 1
+    },
+
+    {
+        id: 'greeting',
+        name: 'Greeting',
+        icon: '🌙',
+        category: 'response',
+        description: 'Handles greetings, farewells, introductions — huntress voice',
+        cardFile: 'greeting.js',
+        defaultWeight: 0.4,
+        matchPatterns: [
+            'hello', 'hi', 'hey', 'greet', 'good morning',
+            'good evening', 'goodbye', 'bye', 'farewell',
+            'who are you', 'introduction', 'thanks', 'thank you'
+        ],
+        negativePatterns: [
+            'search', 'find', 'hunt', 'memory', 'status', 'code',
+            'generate', 'image', 'draw'
+        ],
+        requires: [],
+        produces: ['memory_context'],
+        timeout: 5000,
+        retryOnFail: false,
+        maxRetries: 1
+    },
+
+    // ═══════════════ SYSTEM CARDS ═══════════════
     {
         id: 'decision_log',
         name: 'Decision Logger',
-        icon: '📊',
-        category: 'meta',
-        description: 'Log card decisions and outcomes for weight learning',
+        icon: '📝',
+        category: 'system',
+        description: 'Logs every decision for weight learning and audit trail',
+        cardFile: 'decisionLog.js',
+        defaultWeight: 1.0,
         matchPatterns: [],
         negativePatterns: [],
-        defaultWeight: 1.0,
         requires: ['supabase_client'],
         produces: ['decision_record'],
         timeout: 2000,
         retryOnFail: false,
         maxRetries: 1,
-        execute: null,
-        autoTrigger: true,
-        cardFile: 'decisionLog.js'
+        autoTrigger: true
     }
 ];
 
 // ============================================
 // CATEGORY DEFINITIONS
 // ============================================
-const CARD_CATEGORIES = {
+var CARD_CATEGORIES = {
     memory: {
         label: 'Memory & Recall',
         color: '#a78bfa',
         priority: 2
-    },
-    generation: {
-        label: 'Content Generation',
-        color: '#60a5fa',
-        priority: 3
     },
     retrieval: {
         label: 'External Retrieval',
         color: '#f59e0b',
         priority: 3
     },
+    correlation: {
+        label: 'Pattern Correlation',
+        color: '#7eb8a0',
+        priority: 3
+    },
+    response: {
+        label: 'Response Assembly',
+        color: '#9aada0',
+        priority: 4
+    },
     meta: {
         label: 'System Operations',
         color: '#6b7280',
         priority: 1
+    },
+    system: {
+        label: 'Logging',
+        color: '#4a5568',
+        priority: 0
     }
 };
 
 // ============================================
 // ROUTER CONFIGURATION
 // ============================================
-const ROUTER_CONFIG = {
+var ROUTER_CONFIG = {
     // Minimum confidence score for a card to be played
-    confidenceThreshold: 0.35,
-    
+    confidenceThreshold: 0.3,
+
     // Maximum cards that can fire per turn
-    maxCardsPerTurn: 3,
-    
+    maxCardsPerTurn: 4,
+
     // Whether the same card can fire multiple times per turn
     allowDuplicateCards: false,
-    
+
     // Execution order by category priority
-    executionOrder: ['meta', 'memory', 'retrieval', 'generation'],
-    
+    executionOrder: ['meta', 'memory', 'retrieval', 'correlation', 'response', 'system'],
+
     // Weight learning
     learningRate: 0.05,
-    learningWarmup: 5,
-    
+    learningWarmup: 3,
+
     // Classification mode
     classifierMode: 'heuristic',
-    
+
     // Negative pattern penalty: multiplier applied when negative patterns match
-    negativePatternPenalty: 0.6,
-    
+    negativePatternPenalty: 0.5,
+
     // Default card if nothing matches
-    defaultCard: 'text_generation'
+    defaultCard: 'status_report'
 };
 
 // ============================================
-// PERSISTENCE CONFIG
+// SUPABASE CONFIGURATION (GaiaDB)
 // ============================================
-const PERSISTENCE_CONFIG = {
-    // GaiaDB tables
-    decisionsTable: 'artemis_decisions',
-    patternsTable: 'artemis_patterns',
-    weightsTable: 'artemis_card_weights',
-    
-    // LocalStorage keys
-    localKeys: {
-        compressedMemory: 'artemis_compressed_memory',
-        recentActions: 'artemis_recent_actions',
-        cardWeights: 'artemis_card_weights',
-        decisionHistory: 'artemis_decision_history',
-        voterModelState: 'artemis_voter_model_state',
-        compressionToken: 'artemis_compression_token',
-        memoryGraph: 'artemis_memory_graph',
-        localDB: 'artemis_localdb'
-    },
-    
-    // Limits
-    maxLocalDecisions: 100,
-    maxLocalPatterns: 200,
-    maxLocalDBMessages: 200,
-    maxGraphNodes: 500
-};
-
-// ============================================
-// SUPABASE CONFIGURATION
-// ============================================
-const SUPABASE_CONFIG = {
+var SUPABASE_CONFIG = {
     url: 'https://nbdvavzqvxrlxhsbrluz.supabase.co',
-    anonKey: 'sb_publishable_6x1xlieXjs3dWqEETQcxnQ_4L1UO2uR',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZHZhdnpxdnhxbHhoc2JybHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxMjcyNDQsImV4cCI6MjA2MDcwMzI0NH0.8aw3sD2nXJFmSXJB_GrRhgjCpybKzycYNpTk0iLyYr4',
     tables: {
         conversations: 'conversations',
         sessions: 'sessions',
@@ -320,20 +303,82 @@ const SUPABASE_CONFIG = {
 };
 
 // ============================================
-// AUTO-TRIGGER CARDS (run every cycle)
+// PERSISTENCE CONFIGURATION
 // ============================================
-const AUTO_TRIGGER_CARDS = ['memory_manager', 'decision_log'];
+var PERSISTENCE_CONFIG = {
+    // GaiaDB tables
+    decisionsTable: 'artemis_decisions',
+    patternsTable: 'artemis_patterns',
+    weightsTable: 'artemis_card_weights',
+
+    // LocalStorage keys
+    localKeys: {
+        compressedMemory: 'artemis_compressed_memory',
+        recentActions: 'artemis_recent_actions',
+        cardWeights: 'artemis_card_weights_v3',
+        decisionHistory: 'artemis_decision_history',
+        compressionToken: 'artemis_compression_token',
+        memoryGraph: 'artemis_memory_graph',
+        localDB: 'artemis_localdb'
+    },
+
+    // Limits
+    maxLocalDecisions: 100,
+    maxLocalPatterns: 200,
+    maxLocalDBMessages: 200,
+    maxGraphNodes: 500
+};
 
 // ============================================
-// EXPORT
+// FREE API REGISTRY (for apiHunt.js)
 // ============================================
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        ARTEMIS_CARD_DECK,
-        CARD_CATEGORIES,
-        ROUTER_CONFIG,
-        PERSISTENCE_CONFIG,
-        SUPABASE_CONFIG,
-        AUTO_TRIGGER_CARDS
-    };
-}
+var API_REGISTRY = {
+    wikipedia: {
+        name: 'Wikipedia',
+        category: 'knowledge',
+        baseUrl: 'https://en.wikipedia.org/api/rest_v1/page/summary/',
+        method: 'GET',
+        requiresKey: false,
+        description: 'Encyclopedia article summaries'
+    },
+    openlibrary: {
+        name: 'OpenLibrary',
+        category: 'books',
+        baseUrl: 'https://openlibrary.org/search.json?q=',
+        method: 'GET',
+        requiresKey: false,
+        description: 'Book search and metadata'
+    },
+    dictionary: {
+        name: 'Free Dictionary',
+        category: 'definitions',
+        baseUrl: 'https://api.dictionaryapi.dev/api/v2/entries/en/',
+        method: 'GET',
+        requiresKey: false,
+        description: 'Word definitions, phonetics, examples'
+    },
+    quotable: {
+        name: 'Quotable',
+        category: 'quotes',
+        baseUrl: 'https://api.quotable.io/search/quotes?query=',
+        method: 'GET',
+        requiresKey: false,
+        description: 'Quote search by keyword or author'
+    },
+    openmeteo: {
+        name: 'Open-Meteo',
+        category: 'weather',
+        baseUrl: 'https://api.open-meteo.com/v1/forecast',
+        method: 'GET',
+        requiresKey: false,
+        description: 'Weather forecasts (requires lat/lon params)'
+    }
+};
+
+// ============================================
+// AUTO-TRIGGER CARDS (run every cycle)
+// ============================================
+var AUTO_TRIGGER_CARDS = ['memory_manager', 'card_voter', 'decision_log'];
+
+console.log('🏹 Artemis Card Deck v3.0 loaded — %d cards, %d APIs registered',
+    ARTEMIS_CARD_DECK.length, Object.keys(API_REGISTRY).length);

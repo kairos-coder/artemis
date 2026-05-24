@@ -23,10 +23,14 @@ var gaiaRecall = {
             return { success: true, data: { text_output: 'No search keyword found.' } };
         }
         
+        // Swapped .ilike() for .textSearch() to prevent database crashes
         var query = supabase.from('conversations')
             .select('role, content, olympian, created_at')
             .eq('session_id', sessionId)
-            .ilike('content', '%' + keyword + '%')
+            .textSearch('content', keyword, {
+                type: 'websearch', // Acts like a Google search, ignoring special chars safely
+                config: 'english'
+            })
             .order('created_at', { ascending: false })
             .limit(5);
         

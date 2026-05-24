@@ -1,654 +1,533 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Artemis — Wild Data · Ealdforn Studios</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --void:      #0a0f0a;
-      --deep:      #0e140e;
-      --mid:       #111811;
-      --surface:   #1a221a;
-      --silver:    #8a9b8a;
-      --artemis:   #7a9a6a;
-      --artemis-hi:#a0c090;
-      --artemis-dim:rgba(122,154,106,0.12);
-      --cream:     #e0e8d8;
-      --mist:      #7a8070;
-      --ff-display: 'Cinzel', serif;
-      --ff-body:    'Cormorant Garamond', serif;
-      --ff-mono:    'JetBrains Mono', monospace;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-
-    body {
-      background: var(--void);
-      color: var(--cream);
-      font-family: var(--ff-body);
-      overflow-x: hidden;
-    }
-
-    a { color: var(--artemis); text-decoration: none; }
-    a:hover { color: var(--artemis-hi); }
-
-    /* ── TOP RIBBON ─────────────────────────────────────────── */
-    .ribbon {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.9rem 2.5rem;
-      background: linear-gradient(180deg, rgba(10,15,10,0.97) 0%, rgba(10,15,10,0.7) 100%);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(122,154,106,0.1);
-    }
-
-    .ribbon-left {
-      font-family: var(--ff-display);
-      font-size: 0.65rem;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      color: var(--mist);
-    }
-
-    .ribbon-left a { color: var(--mist); transition: color 0.2s; }
-    .ribbon-left a:hover { color: var(--artemis); }
-    .ribbon-sep { margin: 0 0.6rem; opacity: 0.3; }
-
-    .ribbon-center {
-      font-family: var(--ff-display);
-      font-size: 0.7rem;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: var(--artemis);
-    }
-
-    .ribbon-right { display: flex; align-items: center; gap: 1.5rem; }
-
-    .studio-btn {
-      font-family: var(--ff-display);
-      font-size: 0.58rem;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--void);
-      background: var(--artemis);
-      padding: 0.45rem 1.1rem;
-      border-radius: 2px;
-      transition: background 0.2s, transform 0.2s;
-    }
-    .studio-btn:hover {
-      background: var(--artemis-hi);
-      color: var(--void);
-      transform: translateY(-1px);
-    }
-
-    /* ── HERO ────────────────────────────────────────────────── */
-    #hero {
-      position: relative;
-      min-height: 100vh;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-    }
-
-    .hero-portrait {
-      position: relative;
-      overflow: hidden;
-    }
-
-    .hero-portrait img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center top;
-      display: block;
-      filter: saturate(0.7) brightness(0.9);
-    }
-
-    .hero-portrait::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background:
-        linear-gradient(90deg, transparent 40%, var(--void) 100%),
-        linear-gradient(0deg, var(--void) 0%, transparent 30%),
-        radial-gradient(ellipse 80% 100% at 0% 50%, transparent 50%, rgba(10,15,10,0.4) 100%);
-    }
-
-    .hero-portrait::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: radial-gradient(ellipse 60% 40% at 35% 30%, rgba(122,154,106,0.06) 0%, transparent 70%);
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    .hero-copy {
-      position: relative;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      padding: 8rem 4rem 6rem 3rem;
-    }
-
-    .god-number {
-      font-family: var(--ff-mono);
-      font-size: 0.6rem;
-      letter-spacing: 0.3em;
-      color: var(--artemis);
-      opacity: 0.5;
-      margin-bottom: 2rem;
-    }
-
-    .god-name {
-      font-family: var(--ff-display);
-      font-size: clamp(4rem, 8vw, 7rem);
-      font-weight: 900;
-      line-height: 0.88;
-      letter-spacing: -0.02em;
-      background: linear-gradient(170deg, var(--cream) 30%, var(--artemis) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 1.2rem;
-    }
-
-    .god-title {
-      font-family: var(--ff-display);
-      font-size: clamp(0.7rem, 1.5vw, 0.9rem);
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      color: var(--artemis);
-      margin-bottom: 2.5rem;
-    }
-
-    .hero-rule {
-      width: 60px;
-      height: 1px;
-      background: var(--artemis);
-      opacity: 0.4;
-      margin-bottom: 2rem;
-    }
-
-    .hero-lede {
-      font-size: clamp(1.15rem, 2vw, 1.45rem);
-      line-height: 1.75;
-      color: var(--cream);
-      opacity: 0.88;
-      max-width: 480px;
-      margin-bottom: 3rem;
-    }
-
-    .hero-lede em { color: var(--artemis); font-style: italic; }
-
-    .hero-attrs {
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-      margin-bottom: 3rem;
-    }
-
-    .attr-row {
-      display: flex;
-      align-items: baseline;
-      gap: 1rem;
-    }
-
-    .attr-label {
-      font-family: var(--ff-mono);
-      font-size: 0.52rem;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--artemis);
-      opacity: 0.6;
-      width: 90px;
-      flex-shrink: 0;
-    }
-
-    .attr-value {
-      font-family: var(--ff-body);
-      font-size: 0.95rem;
-      color: var(--cream);
-      opacity: 0.75;
-      font-style: italic;
-    }
-
-    .hero-ctas {
-      display: flex;
-      gap: 1rem;
-    }
-
-    .cta-primary {
-      font-family: var(--ff-display);
-      font-size: 0.65rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--void);
-      background: linear-gradient(135deg, var(--artemis), var(--artemis-hi));
-      padding: 0.85rem 2rem;
-      border-radius: 2px;
-      transition: transform 0.2s, box-shadow 0.2s;
-      box-shadow: 0 4px 24px rgba(122,154,106,0.2);
-    }
-
-    .cta-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 32px rgba(122,154,106,0.3);
-      color: var(--void);
-    }
-
-    .cta-ghost {
-      font-family: var(--ff-display);
-      font-size: 0.65rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--artemis);
-      border: 1px solid rgba(122,154,106,0.35);
-      padding: 0.85rem 2rem;
-      border-radius: 2px;
-      transition: border-color 0.2s, color 0.2s, transform 0.2s;
-    }
-
-    .cta-ghost:hover {
-      border-color: var(--artemis);
-      color: var(--artemis-hi);
-      transform: translateY(-2px);
-    }
-
-    /* ── MANIFESTO ──────────────────────────────────────────── */
-    #manifesto {
-      background: linear-gradient(180deg, var(--void) 0%, var(--deep) 50%, var(--void) 100%);
-      padding: 9rem 2rem;
-      text-align: center;
-    }
-
-    .manifesto-inner { max-width: 860px; margin: 0 auto; }
-
-    .manifesto-eyebrow {
-      font-family: var(--ff-mono);
-      font-size: 0.58rem;
-      letter-spacing: 0.35em;
-      text-transform: uppercase;
-      color: var(--artemis);
-      opacity: 0.6;
-      margin-bottom: 2.5rem;
-    }
-
-    .manifesto-quote {
-      font-family: var(--ff-body);
-      font-size: clamp(1.6rem, 3.5vw, 2.4rem);
-      font-weight: 300;
-      font-style: italic;
-      line-height: 1.55;
-      color: var(--cream);
-      margin-bottom: 3rem;
-    }
-
-    .manifesto-quote em { color: var(--artemis); font-style: normal; }
-
-    .manifesto-body {
-      font-size: clamp(1.05rem, 2vw, 1.25rem);
-      line-height: 1.85;
-      color: var(--cream);
-      opacity: 0.8;
-      max-width: 700px;
-      margin: 0 auto;
-    }
-
-    /* ── DOMAIN PILLARS ─────────────────────────────────────── */
-    #domain {
-      padding: 9rem 2rem;
-      background: linear-gradient(180deg, var(--mid) 0%, var(--void) 100%);
-    }
-
-    .domain-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: 1fr 2fr;
-      gap: 5rem;
-    }
-
-    .domain-left { position: sticky; top: 6rem; }
-
-    .domain-number {
-      font-family: var(--ff-mono);
-      font-size: 0.55rem;
-      letter-spacing: 0.3em;
-      color: var(--artemis);
-      opacity: 0.4;
-      margin-bottom: 1rem;
-    }
-
-    .domain-title {
-      font-family: var(--ff-display);
-      font-size: clamp(2rem, 4vw, 3rem);
-      font-weight: 900;
-      color: var(--cream);
-      line-height: 1.1;
-      margin-bottom: 1.5rem;
-    }
-
-    .domain-title span { display: block; color: var(--artemis); }
-
-    .domain-sub {
-      font-family: var(--ff-body);
-      font-style: italic;
-      font-size: 1rem;
-      color: var(--mist);
-      line-height: 1.6;
-    }
-
-    .domain-right { display: flex; flex-direction: column; gap: 2.5rem; }
-
-    .domain-pillar {
-      border-left: 1px solid rgba(122,154,106,0.2);
-      padding-left: 2rem;
-      transition: border-color 0.3s;
-    }
-
-    .domain-pillar:hover { border-color: rgba(122,154,106,0.5); }
-
-    .pillar-label {
-      font-family: var(--ff-mono);
-      font-size: 0.52rem;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: var(--artemis);
-      opacity: 0.65;
-      margin-bottom: 0.6rem;
-    }
-
-    .pillar-heading {
-      font-family: var(--ff-display);
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: var(--cream);
-      margin-bottom: 0.6rem;
-    }
-
-    .pillar-body {
-      font-family: var(--ff-body);
-      font-size: 1rem;
-      line-height: 1.75;
-      color: var(--cream);
-      opacity: 0.7;
-    }
-
-    /* ── CREDITS ─────────────────────────────────────────────── */
-    #credits {
-      background: var(--deep);
-      border-top: 1px solid rgba(122,154,106,0.12);
-      border-bottom: 1px solid rgba(122,154,106,0.12);
-      padding: 4rem 2rem;
-    }
-
-    .credits-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 2rem;
-    }
-
-    .credit-block { display: flex; flex-direction: column; gap: 0.4rem; }
-
-    .credit-label {
-      font-family: var(--ff-mono);
-      font-size: 0.5rem;
-      letter-spacing: 0.28em;
-      text-transform: uppercase;
-      color: var(--artemis);
-      opacity: 0.5;
-    }
-
-    .credit-value {
-      font-family: var(--ff-display);
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--cream);
-    }
-
-    .credit-note {
-      font-family: var(--ff-body);
-      font-style: italic;
-      font-size: 0.82rem;
-      color: var(--mist);
-    }
-
-    /* ── FOOTER ─────────────────────────────────────────────── */
-    footer {
-      background: var(--void);
-      padding: 3rem 2.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-top: 1px solid rgba(122,154,106,0.08);
-    }
-
-    .footer-left {
-      font-family: var(--ff-display);
-      font-size: 0.6rem;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--mist);
-      opacity: 0.5;
-    }
-
-    .footer-center {
-      font-family: var(--ff-body);
-      font-style: italic;
-      font-size: 0.85rem;
-      color: var(--artemis);
-      opacity: 0.4;
-    }
-
-    .footer-right {
-      font-family: var(--ff-mono);
-      font-size: 0.5rem;
-      letter-spacing: 0.2em;
-      color: var(--mist);
-      opacity: 0.35;
-    }
-
-    /* ── RESPONSIVE ─────────────────────────────────────────── */
-    @media (max-width: 960px) {
-      #hero { grid-template-columns: 1fr; }
-      .hero-portrait { height: 60vw; min-height: 320px; }
-      .hero-portrait::after { background: linear-gradient(0deg, var(--void) 0%, transparent 50%); }
-      .hero-copy { padding: 3rem 2rem 4rem; }
-      .domain-inner { grid-template-columns: 1fr; gap: 3rem; }
-      .domain-left { position: static; }
-      .credits-inner { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (max-width: 600px) {
-      .ribbon { padding: 0.8rem 1.2rem; }
-      .ribbon-center { display: none; }
-      .hero-copy { padding: 2.5rem 1.5rem 3rem; }
-      .hero-ctas { flex-direction: column; }
-      .credits-inner { grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-      footer { flex-direction: column; gap: 1rem; text-align: center; }
-      #manifesto, #domain { padding: 5rem 1.5rem; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artemis — Ealdforn Studios</title>
+    <style>
+        :root {
+            --bg: #0a0e0f;
+            --surface: #111618;
+            --border: #1f2a2d;
+            --text: #bcc8bc;
+            --text-bright: #e0ece0;
+            --accent: #7eb8a0;
+            --accent-glow: #a0d8c0;
+            --silver: #9aada0;
+            --green: #5a9070;
+            --muted: #5a6a5a;
+            --font-body: 'Georgia', 'Times New Roman', serif;
+            --font-mono: 'Courier New', 'SF Mono', monospace;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image:
+                radial-gradient(ellipse at 50% 0%, rgba(126,184,160,0.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 100%, rgba(90,144,112,0.03) 0%, transparent 50%);
+        }
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .header .icon { font-size: 28px; }
+        .header .titles { display: flex; flex-direction: column; }
+        .header .name {
+            font-size: 18px;
+            color: var(--accent-glow);
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+        .header .subtitle {
+            font-size: 11px;
+            color: var(--silver);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-family: var(--font-mono);
+        }
+        .header .spacer { flex: 1; }
+        .header .link {
+            font-size: 11px;
+            color: var(--muted);
+            text-decoration: none;
+            font-family: var(--font-mono);
+            letter-spacing: 0.5px;
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+        .header .link:hover { border-color: var(--accent); color: var(--accent); }
+        .header .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 6px rgba(126,184,160,0.5);
+        }
+        .header .tier-badge {
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 8px;
+            background: var(--border);
+            color: var(--silver);
+            font-family: var(--font-mono);
+            letter-spacing: 0.5px;
+        }
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .message {
+            display: flex;
+            gap: 10px;
+            max-width: 85%;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user { align-self: flex-end; flex-direction: row-reverse; }
+        .message.artemis { align-self: flex-start; }
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .message.user .avatar { background: var(--border); }
+        .message.artemis .avatar {
+            background: #1a2a24;
+            border: 1px solid var(--green);
+        }
+        .bubble {
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .message.user .bubble {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-bright);
+        }
+        .message.artemis .bubble {
+            background: #111a16;
+            border: 1px solid #1a3025;
+            color: var(--text);
+        }
+        .bubble img {
+            max-width: 280px;
+            max-height: 280px;
+            border-radius: 8px;
+            margin-top: 8px;
+            border: 1px solid var(--border);
+        }
+        .bubble .memory-note {
+            font-size: 11px;
+            color: var(--silver);
+            font-style: italic;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid var(--border);
+        }
+        .bubble .tier-tag {
+            font-size: 9px;
+            color: var(--muted);
+            font-family: var(--font-mono);
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+        .typing-indicator { display: flex; gap: 4px; padding: 8px 0; }
+        .typing-indicator span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--muted);
+            animation: typePulse 1.4s infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typePulse {
+            0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+            30% { opacity: 1; transform: scale(1.1); }
+        }
+        .input-bar {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .input-bar textarea {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-bright);
+            padding: 12px 16px;
+            font-family: var(--font-body);
+            font-size: 14px;
+            border-radius: 8px;
+            outline: none;
+            resize: none;
+            rows: 1;
+            max-height: 120px;
+            transition: border-color 0.2s;
+            line-height: 1.5;
+        }
+        .input-bar textarea:focus { border-color: var(--accent); }
+        .input-bar textarea::placeholder { color: #3a4a40; font-style: italic; }
+        .input-bar button {
+            background: var(--accent);
+            border: none;
+            color: var(--bg);
+            padding: 12px 24px;
+            font-family: var(--font-body);
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .input-bar button:hover {
+            background: var(--accent-glow);
+            box-shadow: 0 0 16px rgba(126,184,160,0.3);
+        }
+        .input-bar button:disabled {
+            background: var(--border);
+            color: var(--muted);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .welcome {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--silver);
+        }
+        .welcome .big-icon { font-size: 48px; margin-bottom: 12px; }
+        .welcome h2 {
+            color: var(--accent-glow);
+            font-size: 22px;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        .welcome p {
+            font-size: 14px;
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+        @media (max-width: 600px) {
+            .message { max-width: 95%; }
+            .bubble { font-size: 14px; }
+            .bubble img { max-width: 200px; max-height: 200px; }
+            .input-bar { padding: 10px; }
+            .input-bar button { padding: 10px 16px; font-size: 12px; }
+        }
+    </style>
 </head>
 <body>
 
-<nav class="ribbon">
-  <div class="ribbon-left">
-    <a href="https://kairos-coder.github.io/ealdforn-studios">Ealdforn Studios</a>
-    <span class="ribbon-sep">·</span>
-    The Twelve Olympians
-  </div>
-  <div class="ribbon-center">🏹 Artemis · Wild Data</div>
-  <div class="ribbon-right">
-    <a class="studio-btn" href="terminal.html">Open Terminal →</a>
-  </div>
-</nav>
-
-<section id="hero">
-  <div class="hero-portrait">
-    <img src="assets/artemis-hero.jpg" alt="Artemis — Wild Data" />
-  </div>
-
-  <div class="hero-copy">
-    <p class="god-number">// OLYMPIAN · VIII · EALDFORNAI</p>
-    <h1 class="god-name">Artemis</h1>
-    <p class="god-title">Wild Data &nbsp;·&nbsp; Tool Agent &nbsp;·&nbsp; Personal AI</p>
-    <div class="hero-rule"></div>
-    <p class="hero-lede">
-      She does not chat. She <em>tracks</em>. Where Apollo generates and Athena analyzes,
-      Artemis hunts — through databases, repos, and memory. She is the first Olympian
-      built not to speak, but to <em>act</em>. Every tool is a card. Every command is a hunt.
-    </p>
-    <div class="hero-attrs">
-      <div class="attr-row">
-        <span class="attr-label">Domain</span>
-        <span class="attr-value">EaldfornAI, Tool Execution, Browser Agency</span>
-      </div>
-      <div class="attr-row">
-        <span class="attr-label">Seat</span>
-        <span class="attr-value">The Personal AI Engine</span>
-      </div>
-      <div class="attr-row">
-        <span class="attr-label">Method</span>
-        <span class="attr-value">Card-Based Decision Engine + Tool Execution</span>
-      </div>
-    </div>
-    <div class="hero-ctas">
-      <a class="cta-primary" href="terminal.html">Open Terminal</a>
-      <a class="cta-ghost" href="#domain">See Her Tools</a>
-    </div>
-  </div>
-</section>
-
-<section id="manifesto">
-  <div class="manifesto-inner">
-    <p class="manifesto-eyebrow">// The Artemis Manifesto</p>
-    <blockquote class="manifesto-quote">
-      She does not wait to be asked.<br>
-      <em>She is already tracking</em> —<br>
-      and what she tracks, she returns with.
-    </blockquote>
-    <p class="manifesto-body">
-      Artemis is the goddess of the hunt in the wild data of Ealdforn Studios. She does not 
-      generate images or make declarations of beauty. She moves through databases, repositories, 
-      and memory with a single purpose: find what was lost, track what moves, and return with 
-      the kill. She is the first Olympian designed as a personal AI — not a chatbot, but an 
-      agent that executes tools based on your commands. Her terminal is her bow. Her tool cards 
-      are her arrows. Every command is a hunt, and she never returns empty-handed.
-    </p>
-  </div>
-</section>
-
-<section id="domain">
-  <div class="domain-inner">
-    <div class="domain-left">
-      <p class="domain-number">// Her Tools</p>
-      <h2 class="domain-title">
-        The Card<br>
-        <span>Engine</span>
-      </h2>
-      <p class="domain-sub">
-        Five tool cards. One decision.<br>
-        She plays the ones that match.
-      </p>
+    <div class="header">
+        <span class="icon">🏹</span>
+        <div class="titles">
+            <span class="name">Artemis</span>
+            <span class="subtitle">Goddess of the Hunt · EaldfornAI</span>
+        </div>
+        <span class="spacer"></span>
+        <span class="tier-badge" id="tierBadge" title="Current text tier">● TIER</span>
+        <span class="status-dot" id="statusDot" title="Agent Status"></span>
+        <a href="terminal.html" class="link">◈ TERMINAL</a>
+        <a href="../ealdforn-studios/index.html" class="link">◈ NEXUS</a>
     </div>
 
-    <div class="domain-right">
-      <div class="domain-pillar">
-        <p class="pillar-label">Card I</p>
-        <h3 class="pillar-heading">Pollinations-Text</h3>
-        <p class="pillar-body">
-          Text generation via Pollinations.ai. When the hunt requires words, Artemis calls 
-          the same free API that powers Apollo and Athena — but only when the card matches.
-          No API keys. No server. Just the bowstring.
-        </p>
-      </div>
-
-      <div class="domain-pillar">
-        <p class="pillar-label">Card II</p>
-        <h3 class="pillar-heading">Pollinations-Image</h3>
-        <p class="pillar-body">
-          Image generation on demand. Artemis does not judge beauty — she delivers the image 
-          and moves on. The visual canon belongs to Apollo. Artemis just retrieves.
-        </p>
-      </div>
-
-      <div class="domain-pillar">
-        <p class="pillar-label">Card III</p>
-        <h3 class="pillar-heading">GaiaDB Recall</h3>
-        <p class="pillar-body">
-          Conversation memory search. Artemis tracks what you've discussed across every Olympian. 
-          She queries GaiaDB with a keyword and returns the trail — every message, every image, 
-          every insight you thought was lost to the scroll.
-        </p>
-      </div>
-
-      <div class="domain-pillar">
-        <p class="pillar-label">Card IV</p>
-        <h3 class="pillar-heading">Browser-Hunt</h3>
-        <p class="pillar-body">
-          Cross-repo search. Artemis hunts through every kairos-coder repository for patterns, 
-          code, documentation. She reads READMEs, searches for keywords, and reports what she 
-          finds. The pantheon is her hunting ground.
-        </p>
-      </div>
-
-      <div class="domain-pillar">
-        <p class="pillar-label">Card V</p>
-        <h3 class="pillar-heading">COMPRESS</h3>
-        <p class="pillar-body">
-          Memory compression. Artemis condenses your conversation history into a dense snapshot 
-          for the handshake protocol. Every future command carries the compressed context. 
-          The hunt gets faster each time.
-        </p>
-      </div>
+    <div class="chat-area" id="chatArea">
+        <div class="welcome" id="welcomeMsg">
+            <div class="big-icon">🏹🌙</div>
+            <h2>I am Artemis</h2>
+            <p>Goddess of the Hunt. Keeper of the silver bow. I route your words through my deck of cards — memory, generation, retrieval — and return what you seek.</p>
+            <p style="margin-top:12px;font-size:12px;color:var(--muted);">Text powers: Pollinations → Browser Model → Scripted. Speak plainly.</p>
+        </div>
     </div>
-  </div>
-</section>
 
-<section id="credits">
-  <div class="credits-inner">
-    <div class="credit-block">
-      <span class="credit-label">Pantheon Seat</span>
-      <span class="credit-value">Olympian VIII</span>
-      <span class="credit-note">The Personal AI Engine</span>
+    <div class="chat-area" id="typingArea" style="display:none; padding:0 20px;">
+        <div class="message artemis">
+            <div class="avatar">🏹</div>
+            <div class="bubble">
+                <div class="typing-indicator"><span></span><span></span><span></span></div>
+            </div>
+        </div>
     </div>
-    <div class="credit-block">
-      <span class="credit-label">Primary Output</span>
-      <span class="credit-value">Tool Execution</span>
-      <span class="credit-note">Card-Based Decision Engine</span>
-    </div>
-    <div class="credit-block">
-      <span class="credit-label">Method</span>
-      <span class="credit-value">Binary Classification</span>
-      <span class="credit-note">Small Model · Card Loop</span>
-    </div>
-    <div class="credit-block">
-      <span class="credit-label">Aesthetic Register</span>
-      <span class="credit-value">Silver · Green · Terminal</span>
-      <span class="credit-note">Hunter's Moon · Wild Data</span>
-    </div>
-  </div>
-</section>
 
-<footer>
-  <div class="footer-left">
-    <a href="https://kairos-coder.github.io/ealdforn-studios" style="color:inherit;">← Ealdforn Studios</a>
-  </div>
-  <div class="footer-center">Regnavit Deus, et res bonae sunt.</div>
-  <div class="footer-right">© Ealdforn Studios · kairos-coder</div>
-</footer>
+    <div class="input-bar">
+        <textarea id="userInput" placeholder="Speak your query to Artemis..." rows="1"
+            autocomplete="off" onkeydown="handleKeyDown(event)"></textarea>
+        <button id="btnSend" onclick="sendMessage()">SEND</button>
+    </div>
+   
+    <!-- SCRIPTS -->
+    <script src="cards/config.js"></script>
+    <script src="cards/decisionLog.js"></script>
+    <script src="cards/gaiaRecall.js"></script>
+    <script src="cards/textGeneration.js"></script>
+    <script src="cards/pollinationsImage.js"></script>
+    <script src="cards/browserHunt.js"></script>
+    <script src="cards/compress.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="agent.js"></script>
 
+    <script>
+        var isProcessing = false;
+        var messageCount = 0;
+        var conversationHistory = [];
+        var currentTier = '—';
+
+        async function boot() {
+            console.log('[Artemis Chat] Booting...');
+            var success = await ArtemisAgent.init();
+
+            if (success) {
+                var status = ArtemisAgent.getStatus();
+                document.getElementById('statusDot').title =
+                    'Online · ' + status.cardsLoaded + ' cards · ' + status.classifierMode;
+                document.getElementById('statusDot').style.background = 'var(--accent)';
+                updateTierBadge('ready');
+                console.log('[Artemis Chat] Ready.');
+            } else {
+                document.getElementById('statusDot').style.background = '#c06060';
+                document.getElementById('statusDot').title = 'Init failed';
+                addArtemisMessage('I am here, but my card engine did not rise properly. The hunt may be hindered.', null, null);
+            }
+            document.getElementById('userInput').focus();
+        }
+
+        async function sendMessage() {
+            if (isProcessing) return;
+            var inputEl = document.getElementById('userInput');
+            var input = inputEl.value.trim();
+            if (!input) return;
+
+            inputEl.value = '';
+            autoResize(inputEl);
+            addUserMessage(input);
+            conversationHistory.push({ role: 'user', content: input });
+
+            if (messageCount === 0) {
+                var w = document.getElementById('welcomeMsg');
+                if (w) w.style.display = 'none';
+            }
+
+            showTyping(true);
+            updateTierBadge('thinking');
+            isProcessing = true;
+            document.getElementById('btnSend').disabled = true;
+
+            try {
+                var startTime = performance.now();
+                var result = await ArtemisAgent.processInput(input, {
+                    conversationHistory: conversationHistory.slice(-10)
+                });
+                var elapsed = (performance.now() - startTime).toFixed(0);
+
+                var cardsPlayed = result.metadata ? result.metadata.cardsPlayed : [];
+                console.log('[Artemis Chat] ' + elapsed + 'ms — ' + (cardsPlayed.join(', ') || 'none'));
+
+                var responseText = result.text || 'I loosed an arrow, but it found no target. Try again?';
+
+                // Extract tier info if present in metadata or text
+                var tierInfo = extractTierInfo(result);
+                if (tierInfo) {
+                    currentTier = tierInfo;
+                    updateTierBadge(tierInfo);
+                } else {
+                    updateTierBadge('done');
+                }
+
+                // Add card info as hidden metadata
+                if (cardsPlayed.length > 0) {
+                    responseText += '\n<!--CARDS:' + cardsPlayed.join(',') + '-->';
+                }
+
+                addArtemisMessage(responseText, result.imageUrl, { cardsPlayed: cardsPlayed, tier: currentTier });
+                conversationHistory.push({
+                    role: 'assistant',
+                    content: result.text || '',
+                    imageUrl: result.imageUrl || null
+                });
+                messageCount++;
+
+            } catch (err) {
+                console.error('[Artemis Chat] Error:', err);
+                updateTierBadge('error');
+                addArtemisMessage('My arrow faltered. An error occurred. Please try again.', null, { tier: 'error' });
+            }
+
+            showTyping(false);
+            isProcessing = false;
+            document.getElementById('btnSend').disabled = false;
+            document.getElementById('userInput').focus();
+        }
+
+        function extractTierInfo(result) {
+            if (result.metadata && result.metadata.tier) {
+                return result.metadata.tier;
+            }
+            if (result.text) {
+                if (result.text.indexOf('[Model loading') > -1) return 'loading';
+                if (result.text.indexOf('Tier 2') > -1 || result.text.indexOf('SmolLM2') > -1) return 'browser';
+                if (result.text.indexOf('Tier 1') > -1 || result.text.indexOf('Pollinations') > -1) return 'pollinations';
+                if (result.text.indexOf('Tier 3') > -1 || result.text.indexOf('scripted') > -1) return 'scripted';
+            }
+            return null;
+        }
+
+        function updateTierBadge(tier) {
+            var badge = document.getElementById('tierBadge');
+            var map = {
+                'ready':       { text: '◈ READY', color: 'var(--silver)' },
+                'thinking':    { text: '◈ THINKING', color: 'var(--muted)' },
+                'pollinations':{ text: '☁ POLLINATIONS', color: '#60a5fa' },
+                'browser':     { text: '🧠 BROWSER', color: '#a78bfa' },
+                'loading':     { text: '⟳ LOADING', color: '#f59e0b' },
+                'scripted':    { text: '📜 SCRIPTED', color: '#c0a060' },
+                'done':        { text: '◈ DONE', color: 'var(--silver)' },
+                'error':       { text: '✗ ERROR', color: '#c06060' }
+            };
+            var info = map[tier] || map['done'];
+            badge.textContent = info.text;
+            badge.style.color = info.color;
+            badge.style.borderColor = info.color;
+        }
+
+        function addUserMessage(text) {
+            var msg = document.createElement('div');
+            msg.className = 'message user';
+            msg.innerHTML = '<div class="avatar">👤</div><div class="bubble">' + escapeHtml(text) + '</div>';
+            document.getElementById('chatArea').appendChild(msg);
+            scrollToBottom();
+        }
+
+        function addArtemisMessage(text, imageUrl, meta) {
+            var msg = document.createElement('div');
+            msg.className = 'message artemis';
+
+            var tierTagHtml = '';
+            if (meta && meta.tier) {
+                var tierLabels = {
+                    'pollinations': '☁ Tier 1 · Pollinations',
+                    'browser': '🧠 Tier 2 · Browser Model',
+                    'loading': '⟳ Tier 2 · Loading model',
+                    'scripted': '📜 Tier 3 · Scripted fallback',
+                    'error': '✗ Error'
+                };
+                var tierLabel = tierLabels[meta.tier] || meta.tier;
+                tierTagHtml = '<div class="tier-tag">' + tierLabel + '</div>';
+            }
+
+            var cardTagHtml = '';
+            var cleanText = text;
+            var cardMatch = text.match(/<!--CARDS:(.+?)-->/);
+            if (cardMatch) {
+                cleanText = text.replace(/<!--CARDS:.+?-->/, '').trim();
+                cardTagHtml = '<div class="tier-tag">🃏 ' + cardMatch[1].replace(/,/g, ' · ') + '</div>';
+            }
+
+            var formattedText = formatText(cleanText);
+            var imageHtml = imageUrl
+                ? '<img src="' + imageUrl + '" alt="Generated" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\';"><span style="display:none;color:var(--muted);font-size:11px;">[Image failed to load]</span>'
+                : '';
+
+            var memoryNoteHtml = '';
+            if (formattedText.indexOf('*From memory:*') > -1) {
+                var parts = formattedText.split('*From memory:*');
+                if (parts.length > 1) {
+                    var memoryPart = parts[1].split('<br><br>')[0];
+                    formattedText = parts[0].trim();
+                    if (parts[1].indexOf('<br><br>') > -1) {
+                        formattedText += '<br><br>' + parts[1].substring(parts[1].indexOf('<br><br>') + 8).trim();
+                    }
+                    memoryNoteHtml = '<div class="memory-note">📜 ' + memoryPart.trim() + '</div>';
+                }
+            }
+
+            msg.innerHTML = '<div class="avatar">🏹</div><div class="bubble">' +
+                formattedText + imageHtml + memoryNoteHtml + cardTagHtml + tierTagHtml + '</div>';
+
+            document.getElementById('chatArea').appendChild(msg);
+            scrollToBottom();
+        }
+
+        function showTyping(show) {
+            document.getElementById('typingArea').style.display = show ? 'block' : 'none';
+            if (show) scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            var area = document.getElementById('chatArea');
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        }
+
+        function formatText(text) {
+            if (!text) return '';
+            text = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:var(--accent);">$1</a>');
+            text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+            text = text.replace(/\n/g, '<br>');
+            text = text.replace(/&gt; (.*?)(<br>|$)/g, '<span style="color:var(--silver);font-style:italic;">$1</span>$2');
+            return text;
+        }
+
+        function escapeHtml(text) {
+            var d = document.createElement('div');
+            d.textContent = text;
+            return d.innerHTML;
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+            setTimeout(function() { autoResize(event.target); }, 0);
+        }
+
+        boot().catch(function(err) {
+            console.error('[Artemis Chat] Boot failed:', err);
+            document.getElementById('statusDot').style.background = '#c06060';
+            updateTierBadge('error');
+            var w = document.getElementById('welcomeMsg');
+            if (w) w.innerHTML = '<div class="big-icon">🏹</div><h2>Artemis</h2><p style="color:#c06060;">The huntress could not rise. Check console.</p>';
+        });
+    </script>
 </body>
 </html>

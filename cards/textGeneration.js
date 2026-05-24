@@ -1,7 +1,7 @@
 var textGeneration = {
     id: 'text_generation',
     
-    _tierTimeout: 3000,  // 3 seconds for Pollinations (was 1.62)
+    _tierTimeout: 8000,  // Increased to 8 seconds to allow the LLM time to respond
     _pollinationsAvailable: true,
     _pollinationsConsecutiveFails: 0,
     _pollinationsCooldown: false,
@@ -28,9 +28,12 @@ var textGeneration = {
         
         // Tier 1: Pollinations
         if (this._pollinationsAvailable && !this._pollinationsCooldown) {
+            var controller = new AbortController(); // Create the abort controller
+            
             var result = await this._raceTimeout(
-                this._tryPollinations(input, memoryContext),
-                this._tierTimeout
+                this._tryPollinations(input, memoryContext, controller),
+                this._tierTimeout,
+                controller
             );
             
             if (result) {
@@ -71,15 +74,19 @@ var textGeneration = {
         };
     },
     
-    _raceTimeout: function(promise, ms) {
+    _raceTimeout: function(promise, ms, controller) {
         return new Promise(function(resolve) {
-            var timer = setTimeout(function() { resolve(null); }, ms);
+            var timer = setTimeout(function() { 
+                if (controller) controller.abort(); // Actively kill the fetch on timeout
+                resolve(null); 
+            }, ms);
+            
             promise.then(function(r) { clearTimeout(timer); resolve(r); })
                    .catch(function() { clearTimeout(timer); resolve(null); });
         });
     },
     
-    _tryPollinations: async function(input, memoryContext) {
+    _tryPollinations: async function(input, memoryContext, controller) {
         try {
             var prompt = this._buildPrompt(input, memoryContext);
             var messages = [];
@@ -97,7 +104,8 @@ var textGeneration = {
             var response = await fetch('https://text.pollinations.ai/openai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: messages, model: 'openai', temperature: 0.7, max_tokens: 200 })
+                body: JSON.stringify({ messages: messages, model: 'openai', temperature: 0.7, max_tokens: 200 }),
+                signal: controller.signal // Tie the fetch to the abort controller
             });
             
             if (response.status === 429) {
@@ -137,3 +145,7 @@ var textGeneration = {
         return 'I hear you. Say STATUS, AUDIT, or try rephrasing. (Pollinations may be on cooldown)';
     }
 };
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = textGeneration;
+}

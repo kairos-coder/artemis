@@ -2,13 +2,14 @@ var memoryManager = {
     id: 'memory_manager',
     
     // ── STATE ──────────────────────────────────
-    _localDB: null,           // Local conversation cache
-    _graph: null,             // Memory graph (nodes + edges)
-    _sessionStart: null,      // When this session began
-    _lastActivity: null,      // Last user interaction timestamp
-    _timeoutMinutes: 10,      // Session timeout threshold
-    _timeoutCheckInterval: null, // Interval ID for timeout checking
-    _timeoutCallback: null,   // Called when session times out
+    _localDB: null,
+    _graph: null,
+    _sessionStart: null,
+    _lastActivity: null,
+    _timeoutMinutes: 10,
+    _timeoutCheckInterval: null,
+    _timeoutCallback: null,
+    _supabase: null,              // ← NEW: stored Supabase client
     
     // ── INIT ───────────────────────────────────
     init: function() {
@@ -26,23 +27,27 @@ var memoryManager = {
     run: async function(context) {
         this._lastActivity = Date.now();
         
+        // Store Supabase client for timeout handler
+        if (context.supabase) {
+            this._supabase = context.supabase;
+        }
+        
         var input = context.input;
         var outputs = context.outputs;
-        var supabase = context.supabase;
         var sessionId = context.sessionId;
         
         // 1. Index the current exchange into LocalDB
         this._indexExchange(input, outputs);
         
-        // 2. Update the memory graph with any new entities/patterns
+        // 2. Update the memory graph
         this._updateGraph(input, outputs);
         
-        // 3. If GaiaDB context came back, merge it into LocalDB
+        // 3. Merge remote memories
         if (outputs.memory_context) {
             this._mergeRemoteMemories(outputs.memory_context);
         }
         
-        // 4. Persist everything to localStorage
+        // 4. Persist
         this._saveLocalDB();
         this._saveGraph();
         
@@ -76,7 +81,6 @@ var memoryManager = {
     
     _saveLocalDB: function() {
         try {
-            // Keep localDB lean — max 200 messages
             if (this._localDB.messages.length > 200) {
                 this._localDB.messages = this._localDB.messages.slice(-200);
             }
@@ -89,8 +93,8 @@ var memoryManager = {
     _indexExchange: function(input, outputs) {
         var entry = {
             timestamp: Date.now(),
-            input: input.substring(0, 500),
-            output: (outputs.text_output || '').substring(0, 500),
+            input: (input || '').substring(0, 500),
+            output: (outputs.text_output || outputs.memory_context || '').substring(0, 500),
             hasImage: !!outputs.image_url,
             cardsPlayed: outputs.cards_played || [],
             tags: this._extractTags(input)
@@ -100,10 +104,10 @@ var memoryManager = {
     
     _extractTags: function(text) {
         var tags = [];
-        var lower = text.toLowerCase();
+        var lower = (text || '').toLowerCase();
         
         var tagPatterns = [
-            { words: ['artemis', 'athena', 'apollo', 'zeus', 'hera', 'poseidon', 'hermes'], category: 'olympian' },
+            { words: ['artemis', 'athena', 'apollo', 'zeus', 'hera', 'poseidon', 'hermes', 'demeter'], category: 'olympian' },
             { words: ['gaia', 'supabase', 'database', 'table', 'sql'], category: 'infrastructure' },
             { words: ['card', 'deck', 'router', 'agent', 'engine'], category: 'architecture' },
             { words: ['memory', 'recall', 'remember', 'pattern', 'learn'], category: 'memory' },
@@ -126,13 +130,11 @@ var memoryManager = {
     },
     
     _mergeRemoteMemories: function(memoryContext) {
-        // Parse the memory context for [role]: content patterns
         var lines = memoryContext.split('\n');
         for (var i = 0; i < lines.length; i++) {
             var line = lines[i].trim();
             if (!line) continue;
             
-            // Check if this entry is already in localDB
             var isDuplicate = false;
             for (var j = 0; j < this._localDB.messages.length; j++) {
                 if (this._localDB.messages[j].output && 
@@ -144,7 +146,7 @@ var memoryManager = {
             
             if (!isDuplicate) {
                 this._localDB.messages.push({
-                    timestamp: Date.now() - 100000, // Mark as older
+                    timestamp: Date.now() - 100000,
                     input: '[remote]',
                     output: line.substring(0, 500),
                     hasImage: false,
@@ -178,11 +180,10 @@ var memoryManager = {
     },
     
     _updateGraph: function(input, outputs) {
-        var allText = input + ' ' + (outputs.text_output || '');
+        var allText = (input || '') + ' ' + (outputs.text_output || outputs.memory_context || '');
         var entities = this._extractEntities(allText);
         var tags = this._extractTags(input);
         
-        // Add/update nodes
         for (var i = 0; i < entities.length; i++) {
             var entity = entities[i].toLowerCase();
             if (!this._graph.nodes[entity]) {
@@ -197,7 +198,6 @@ var memoryManager = {
             this._graph.nodes[entity].lastSeen = Date.now();
             this._graph.nodes[entity].occurrences++;
             
-            // Merge tags
             for (var t = 0; t < tags.length; t++) {
                 if (this._graph.nodes[entity].tags.indexOf(tags[t]) === -1) {
                     this._graph.nodes[entity].tags.push(tags[t]);
@@ -205,7 +205,6 @@ var memoryManager = {
             }
         }
         
-        // Add edges between co-occurring entities
         for (var j = 0; j < entities.length; j++) {
             for (var k = j + 1; k < entities.length; k++) {
                 this._addOrUpdateEdge(entities[j].toLowerCase(), entities[k].toLowerCase());
@@ -214,12 +213,12 @@ var memoryManager = {
     },
     
     _extractEntities: function(text) {
-        // Extract capitalized words, Olympian names, and technical terms
         var entities = [];
-        var words = text.split(/\s+/);
+        var words = (text || '').split(/\s+/);
         var knownEntities = [
             'artemis', 'athena', 'apollo', 'zeus', 'hera', 'poseidon', 'hermes',
             'gaia', 'supabase', 'kairos', 'ealdforn', 'pollinations', 'webllm',
+            'demeter', 'hephaestus', 'aphrodite', 'ares', 'persephone',
             'smollm', 'qwen', 'chat.html', 'terminal.html', 'agent.js',
             'config.js', 'supabase', 'gaiadb', 'kairosdb', 'telos',
             'monastery', 'phase-lock', 'matthew', 'sister_ds'
@@ -229,7 +228,6 @@ var memoryManager = {
             var word = words[i].replace(/[^a-zA-Z0-9._-]/g, '').toLowerCase();
             if (word.length < 2) continue;
             
-            // Check against known entities
             for (var j = 0; j < knownEntities.length; j++) {
                 if (word.indexOf(knownEntities[j]) > -1 || knownEntities[j].indexOf(word) > -1) {
                     if (entities.indexOf(knownEntities[j]) === -1) {
@@ -238,7 +236,6 @@ var memoryManager = {
                 }
             }
             
-            // Capitalized words are likely entities
             var original = words[i].replace(/[^a-zA-Z0-9._-]/g, '');
             if (original.length > 0 && original[0] === original[0].toUpperCase() && 
                 original[0] !== original[0].toLowerCase()) {
@@ -254,7 +251,6 @@ var memoryManager = {
     _addOrUpdateEdge: function(source, target) {
         if (source === target) return;
         
-        // Check if edge exists
         for (var i = 0; i < this._graph.edges.length; i++) {
             var edge = this._graph.edges[i];
             if ((edge.source === source && edge.target === target) ||
@@ -265,7 +261,6 @@ var memoryManager = {
             }
         }
         
-        // New edge
         this._graph.edges.push({
             source: source,
             target: target,
@@ -287,42 +282,45 @@ var memoryManager = {
                     Math.round(idleTime / 1000) + 's idle');
                 self._handleSessionTimeout();
             }
-        }, 30000); // Check every 30 seconds
+        }, 30000);
     },
     
     _handleSessionTimeout: async function() {
-        // 1. Generate a summary of this session
+        // 1. Generate summary
         var summary = this._generateSessionSummary();
         
-        // 2. Push summary to GaiaDB if connected
-var sb = (typeof window !== 'undefined' && window.supabase) ? window.supabase : null;
-if (sb) {
-    try {
-        var sessionsTable = (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.tables)
-            ? SUPABASE_CONFIG.tables.sessions
-            : 'sessions';
+        // 2. Push to GaiaDB using STORED client (not window.supabase)
+        var sb = this._supabase;
+        if (sb) {
+            try {
+                var sessionsTable = (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.tables)
+                    ? SUPABASE_CONFIG.tables.sessions
+                    : 'sessions';
+                
+                var sessionToken = localStorage.getItem('artemis_session_id') || 
+                                   (typeof sessionId !== 'undefined' ? sessionId : 'unknown');
+                
+                await sb.from(sessionsTable).upsert({
+                    session_token: sessionToken,
+                    summary: summary,
+                    message_count: this._localDB.messages.length,
+                    graph_nodes: Object.keys(this._graph.nodes).length,
+                    graph_edges: this._graph.edges.length,
+                    last_active: new Date().toISOString(),
+                    ended_at: new Date().toISOString()
+                });
+                console.log('[MemoryManager] Session summary pushed to GaiaDB');
+            } catch(err) {
+                console.warn('[MemoryManager] Summary push failed:', err.message);
+            }
+        } else {
+            console.log('[MemoryManager] No Supabase client — session summary saved locally only');
+        }
         
-        await sb.from(sessionsTable).upsert({
-            session_token: localStorage.getItem('artemis_session_id'),
-            summary: summary,
-            message_count: this._localDB.messages.length,
-            graph_nodes: Object.keys(this._graph.nodes).length,
-            graph_edges: this._graph.edges.length,
-            last_active: new Date().toISOString(),
-            ended_at: new Date().toISOString()
-        });
-        console.log('[MemoryManager] Session summary pushed to GaiaDB');
-    } catch(err) {
-        console.warn('[MemoryManager] Summary push failed:', err.message);
-    }
-} else {
-    console.log('[MemoryManager] Supabase not connected — session summary saved locally only');
-}
-        
-        // 3. Compact localStorage
+        // 3. Compact
         this._compactLocalDB();
         
-        // 4. Save session record locally
+        // 4. Save session record
         this._localDB.sessions.push({
             start: this._sessionStart,
             end: Date.now(),
@@ -331,11 +329,11 @@ if (sb) {
         });
         this._saveLocalDB();
         
-        // 5. Reset session
+        // 5. Reset
         this._sessionStart = Date.now();
         this._lastActivity = Date.now();
         
-        // 6. Call external timeout callback if registered
+        // 6. Callback
         if (this._timeoutCallback) {
             this._timeoutCallback(summary);
         }
@@ -347,10 +345,8 @@ if (sb) {
         var messages = this._localDB.messages;
         if (messages.length === 0) return 'Empty session.';
         
-        // Get recent messages
         var recent = messages.slice(-20);
         
-        // Extract key topics from tags
         var tagCounts = {};
         for (var i = 0; i < recent.length; i++) {
             var tags = recent[i].tags || [];
@@ -359,7 +355,6 @@ if (sb) {
             }
         }
         
-        // Get top tags
         var topTags = [];
         var keys = Object.keys(tagCounts);
         for (var k = 0; k < keys.length; k++) {
@@ -368,7 +363,6 @@ if (sb) {
         topTags.sort(function(a, b) { return b.count - a.count; });
         topTags = topTags.slice(0, 5);
         
-        // Top graph nodes
         var nodes = [];
         var nodeKeys = Object.keys(this._graph.nodes);
         for (var n = 0; n < nodeKeys.length; n++) {
@@ -380,7 +374,6 @@ if (sb) {
         nodes.sort(function(a, b) { return b.occurrences - a.occurrences; });
         nodes = nodes.slice(0, 10);
         
-        // Build summary string
         var parts = [];
         parts.push('Session: ' + messages.length + ' messages');
         
@@ -406,7 +399,6 @@ if (sb) {
     },
     
     _compactLocalDB: function() {
-        // Keep only the last 50 messages and last 5 sessions
         this._localDB.messages = this._localDB.messages.slice(-50);
         this._localDB.sessions = this._localDB.sessions.slice(-5);
         this._localDB.lastCompact = Date.now();
@@ -462,7 +454,7 @@ if (sb) {
     }
 };
 
-// Auto-init when loaded
+// Auto-init
 memoryManager.init();
 
 if (typeof module !== 'undefined' && module.exports) {

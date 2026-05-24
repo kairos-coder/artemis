@@ -292,7 +292,7 @@ var ROUTER_CONFIG = {
 // ============================================
 var SUPABASE_CONFIG = {
     url: 'https://nbdvavzqvxrlxhsbrluz.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZHZhdnpxdnhxbHhoc2JybHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxMjcyNDQsImV4cCI6MjA2MDcwMzI0NH0.8aw3sD2nXJFmSXJB_GrRhgjCpybKzycYNpTk0iLyYr4',
+    anonKey: 'sb_publishable_6x1xlieXjs3dWqEETQcxnQ_4L1UO2uR',
     tables: {
         conversations: 'conversations',
         sessions: 'sessions',

@@ -3,11 +3,10 @@ var browserHunt = {
     icon: '🏹',
     description: 'Hunt through kairos-coder repos — reads HTML, JS, CSS, MD, and JSON files',
     
-    // Known repos to hunt through
+    // Known repos to hunt through — ALLOWLIST (only repos that actually exist)
     _repos: [
-        'apollo', 'athena', 'artemis', 'zeus', 'hera', 'hermes',
-        'poseidon', 'demeter', 'persephone', 'hephaestus', 'aphrodite', 'ares',
-        'gaia', 'ealdenmot', 'ealdforn-studios', 'kairos-coder.github.io'
+        'artemis', 'demeter', 'hephaestus', 'apollo', 'athena',
+        'poseidon', 'hermes', 'zeus', 'nexus', 'kairos-coder.github.io'
     ],
     
     // File types to check (in priority order)
@@ -33,10 +32,9 @@ var browserHunt = {
         console.log('[BrowserHunt] Hunting for: "' + pattern + '"');
         
         var results = [];
-        var fetchPromises = []; // Array to hold all our parallel requests
+        var fetchPromises = [];
         var totalFilesChecked = 0;
         
-        // Loop through and setup all the promises without waiting for them yet
         for (var r = 0; r < this._repos.length; r++) {
             var repo = this._repos[r];
             
@@ -45,7 +43,7 @@ var browserHunt = {
                 var cacheKey = repo + '/' + file;
                 var rawUrl = 'https://raw.githubusercontent.com/kairos-coder/' + repo + '/main/' + file;
                 
-                // 1. Check cache first (synchronous)
+                // Check cache first
                 if (this._cache[cacheKey] && (Date.now() - this._cache[cacheKey].timestamp) < this._cacheTimeout) {
                     totalFilesChecked++;
                     var cachedContent = this._cache[cacheKey].content;
@@ -62,50 +60,49 @@ var browserHunt = {
                     continue; 
                 }
                 
-                // 2. Setup the async fetch promise (do not await here!)
-                var fetchPromise = (async (repoName, fileName, cacheId, url) => {
-                    try {
-                        var controller = new AbortController();
-                        var timeout = setTimeout(function() { controller.abort(); }, 3000);
-                        
-                        var response = await fetch(url, { 
-                            signal: controller.signal,
-                            headers: { 'Accept': 'text/plain, text/html, application/javascript, text/css, application/json' }
-                        });
-                        
-                        clearTimeout(timeout);
-                        
-                        if (response.ok) {
-                            var content = await response.text();
+                // Setup async fetch
+                var fetchPromise = (function(repoName, fileName, cacheId, url, self) {
+                    return new Promise(async function(resolve) {
+                        try {
+                            var controller = new AbortController();
+                            var timeout = setTimeout(function() { controller.abort(); }, 3000);
                             
-                            // Cache it
-                            this._cache[cacheId] = { content: content, timestamp: Date.now() };
+                            var response = await fetch(url, { 
+                                signal: controller.signal,
+                                headers: { 'Accept': 'text/plain, text/html, application/javascript, text/css, application/json' }
+                            });
                             
-                            // Check for pattern
-                            if (content.toLowerCase().indexOf(pattern.toLowerCase()) > -1) {
-                                var snippet = this._extractSnippet(content, pattern);
-                                results.push({
-                                    repo: repoName, 
-                                    file: fileName, 
-                                    url: 'https://github.com/kairos-coder/' + repoName + '/blob/main/' + fileName,
-                                    rawUrl: url, 
-                                    matchType: 'content', 
-                                    snippet: snippet, 
-                                    cached: false
-                                });
+                            clearTimeout(timeout);
+                            
+                            if (response.ok) {
+                                var content = await response.text();
+                                self._cache[cacheId] = { content: content, timestamp: Date.now() };
+                                
+                                if (content.toLowerCase().indexOf(pattern.toLowerCase()) > -1) {
+                                    var snippet = self._extractSnippet(content, pattern);
+                                    results.push({
+                                        repo: repoName, 
+                                        file: fileName, 
+                                        url: 'https://github.com/kairos-coder/' + repoName + '/blob/main/' + fileName,
+                                        rawUrl: url, 
+                                        matchType: 'content', 
+                                        snippet: snippet, 
+                                        cached: false
+                                    });
+                                }
                             }
+                        } catch (err) {
+                            // Silent fail for missing files
                         }
-                    } catch (err) {
-                        // Silent fail for network errors / missing files
-                    }
-                    return true; // Used to count completed network checks
-                })(repo, file, cacheKey, rawUrl);
+                        resolve(true);
+                    });
+                })(repo, file, cacheKey, rawUrl, this);
                 
                 fetchPromises.push(fetchPromise);
             }
         }
         
-        // Wait for ALL requests to finish simultaneously
+        // Wait for all requests
         var completedFetches = await Promise.all(fetchPromises);
         totalFilesChecked += completedFetches.length;
         
@@ -114,12 +111,12 @@ var browserHunt = {
         if (results.length === 0) {
             textOutput = 'Hunt complete. Checked ' + totalFilesChecked + ' files across ' + this._repos.length + ' repos. Pattern "' + pattern + '" not found.';
         } else {
-            textOutput = 'Hunt complete. Found "' + pattern + '" in ' + results.length + ' file(s) across ' + totalFilesChecked + ' checked:\n\n';
+            textOutput = 'Hunt complete. Found "' + pattern + '" in ' + results.length + ' file(s):\n\n';
             for (var i = 0; i < results.length; i++) {
-                var r = results[i];
-                textOutput += (i + 1) + '. ' + r.repo + '/' + r.file + (r.cached ? ' (cached)' : '') + '\n';
-                if (r.snippet) textOutput += '   "' + r.snippet + '"\n';
-                textOutput += '   ' + r.rawUrl + '\n\n';
+                var res = results[i];
+                textOutput += (i + 1) + '. ' + res.repo + '/' + res.file + (res.cached ? ' (cached)' : '') + '\n';
+                if (res.snippet) textOutput += '   "' + res.snippet + '"\n';
+                textOutput += '   ' + res.rawUrl + '\n\n';
             }
         }
         
@@ -129,6 +126,15 @@ var browserHunt = {
             success: true,
             data: {
                 text_output: textOutput,
+                file_results: results.map(function(r) {
+                    return {
+                        path: r.repo + '/' + r.file,
+                        excerpt: r.snippet || '',
+                        url: r.rawUrl,
+                        repo: r.repo,
+                        file: r.file
+                    };
+                }),
                 hunt_results: results,
                 pattern: pattern,
                 files_checked: totalFilesChecked,

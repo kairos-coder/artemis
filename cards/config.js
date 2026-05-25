@@ -1,9 +1,10 @@
 // ============================================
-// ARTEMIS CARD REGISTRY v3.0 — Huntress Engine
+// ARTEMIS CARD REGISTRY v3.1 — Huntress Engine
 // ============================================
 // No Pollinations. No text generation APIs.
 // Artemis hunts data sources: GaiaDB, APIs, files, memory.
 // Every card hunts. Every response is assembled from quarry.
+// assemble_phrase is the default card — huntress voice layer.
 // ============================================
 
 var ARTEMIS_CARD_DECK = [
@@ -156,6 +157,24 @@ var ARTEMIS_CARD_DECK = [
 
     // ═══════════════ RESPONSE CARDS ═══════════════
     {
+        id: 'assemble_phrase',
+        name: 'Assemble Phrase',
+        icon: '🪶',
+        category: 'response',
+        description: 'Assembles hunt results into natural huntress speech using weighted templates — the voice of Artemis',
+        cardFile: 'assemblePhrase.js',
+        defaultWeight: 1.0,
+        matchPatterns: [],
+        negativePatterns: [],
+        requires: [],
+        produces: ['assembled_phrase', 'phrase_intent', 'phrase_template'],
+        timeout: 3000,
+        retryOnFail: false,
+        maxRetries: 1,
+        autoTrigger: true
+    },
+
+    {
         id: 'status_report',
         name: 'Status Report',
         icon: '📊',
@@ -283,8 +302,8 @@ var ROUTER_CONFIG = {
     // Negative pattern penalty: multiplier applied when negative patterns match
     negativePatternPenalty: 0.5,
 
-    // Default card if nothing matches
-    defaultCard: 'status_report'
+    // Default card if nothing matches — assemble_phrase is the voice layer
+    defaultCard: 'assemble_phrase'
 };
 
 // ============================================
@@ -378,7 +397,7 @@ var API_REGISTRY = {
 // ============================================
 // AUTO-TRIGGER CARDS (run every cycle)
 // ============================================
-var AUTO_TRIGGER_CARDS = ['memory_manager', 'card_voter', 'decision_log'];
+var AUTO_TRIGGER_CARDS = ['memory_manager', 'card_voter', 'assemble_phrase', 'decision_log'];
 
-console.log('🏹 Artemis Card Deck v3.0 loaded — %d cards, %d APIs registered',
+console.log('🏹 Artemis Card Deck v3.1 loaded — %d cards, %d APIs registered',
     ARTEMIS_CARD_DECK.length, Object.keys(API_REGISTRY).length);

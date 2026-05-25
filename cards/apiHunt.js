@@ -1,11 +1,3 @@
-// ============================================
-// API HUNT CARD — Free API retrieval
-// ============================================
-// Hunts API_REGISTRY for matching APIs
-// Routes queries to Wikipedia, OpenLibrary, Dictionary, Quotes
-// Returns structured data for the response builder
-// ============================================
-
 var apiHunt = (function() {
     'use strict';
 
@@ -13,7 +5,6 @@ var apiHunt = (function() {
     var name = 'API Hunt';
     var icon = '🏹';
 
-    // API category routing keywords
     var categoryRouting = {
         knowledge: ['what is', 'who is', 'tell me about', 'explain', 'information about', 'wiki', 'wikipedia', 'encyclopedia'],
         definitions: ['define', 'definition', 'meaning of', 'what does', 'dictionary', 'means'],
@@ -28,7 +19,6 @@ var apiHunt = (function() {
         var results = {};
         var errors = [];
 
-        // Determine which APIs to hit
         var targets = routeToAPIs(inputLower);
 
         console.log('[apiHunt] Hunting: ' + targets.join(', '));
@@ -75,7 +65,6 @@ var apiHunt = (function() {
             }
         }
 
-        // Default: try knowledge (Wikipedia)
         if (targets.length === 0) {
             targets.push('knowledge');
         }
@@ -103,16 +92,21 @@ var apiHunt = (function() {
     }
 
     function extractSearchTerm(query, category) {
-        var lower = query.toLowerCase();
+        var term = query.toLowerCase().trim();
 
-        // Strip common prefixes
+        // ── Strip conversational prefixes ──
         var prefixes = [
             'what is', 'who is', 'tell me about', 'define', 'definition of',
             'search for', 'find', 'look up', 'hunt for', 'information about',
-            'meaning of', 'what does', 'explain'
+            'meaning of', 'what does', 'explain', 'i am hunting', 'i am looking for',
+            'i want to know about', 'i need', 'i want', 'can you find',
+            'can you tell me about', 'show me', 'give me', 'get me',
+            'i\'m hunting', 'i\'m looking for', 'i need information on',
+            'hunt for wikipedia', 'search wikipedia for',
+            'wikipedia articles on', 'wikipedia articles about',
+            'articles on', 'articles about', 'find wikipedia', 'find me'
         ];
 
-        var term = lower;
         for (var i = 0; i < prefixes.length; i++) {
             if (term.indexOf(prefixes[i]) === 0) {
                 term = term.substring(prefixes[i].length).trim();
@@ -120,10 +114,21 @@ var apiHunt = (function() {
             }
         }
 
-        // Remove question marks, extra spaces
-        term = term.replace(/[?]/g, '').trim();
+        // ── Strip trailing fluff ──
+        term = term.replace(/[?.,!]/g, '').trim();
+        term = term.replace(/\s+(please|thanks|thank you)$/i, '').trim();
 
-        // For Wikipedia: capitalize words for better summary matching
+        // ── If term is still very long, extract key nouns ──
+        var words = term.split(/\s+/);
+        if (words.length > 5) {
+            var fillerWords = ['a', 'an', 'the', 'better', 'good', 'best', 'new', 'old', 'some', 'any', 'more', 'am'];
+            var keyWords = words.filter(function(w) {
+                return fillerWords.indexOf(w) === -1 && w.length > 2;
+            });
+            term = keyWords.slice(0, 4).join(' ');
+        }
+
+        // ── For Wikipedia: capitalize ──
         if (category === 'knowledge') {
             term = term.split(' ').map(function(w) {
                 return w.charAt(0).toUpperCase() + w.slice(1);
@@ -139,7 +144,6 @@ var apiHunt = (function() {
             var response = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(query));
             if (!response.ok) {
                 if (response.status === 404) {
-                    // Try search
                     var searchResp = await fetch('https://en.wikipedia.org/w/api.php?action=opensearch&search=' + encodeURIComponent(query) + '&limit=3&format=json&origin=*');
                     if (searchResp.ok) {
                         var searchData = await searchResp.json();

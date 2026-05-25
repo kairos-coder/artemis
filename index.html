@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artemis — Ealdforn Studios</title>
+    <title>Artemis — The Order of Olympus</title>
     <style>
         :root {
             --bg: #0a0e0f;
@@ -18,26 +18,20 @@
             --muted: #5a6a5a;
             --font-body: 'Georgia', 'Times New Roman', serif;
             --font-mono: 'Courier New', 'SF Mono', monospace;
-
-            /* Canvas zone colors */
-            --zone-queue:     #0f1a16;
-            --zone-surface:   #0a0e0f;
-            --zone-lexicon:   #0d1614;
-            --zone-border:    #1a2a24;
-
-            /* Domain colors */
-            --domain-hunt:      #7eb8a0;
-            --domain-wild:      #5a9070;
-            --domain-semantic:  #9aada0;
-            --domain-lunar:     #a0b8d0;
-            --domain-demeter:   #c8a060;
-            --domain-apollo:    #f0c040;
-            --domain-poseidon:  #4060a0;
-            --domain-hermes:    #c060c0;
+            --zone-queue: #0f1a16;
+            --zone-surface: #0a0e0f;
+            --zone-lexicon: #0d1614;
+            --zone-border: #1a2a24;
+            --domain-hunt: #7eb8a0;
+            --domain-wild: #5a9070;
+            --domain-semantic: #9aada0;
+            --domain-lunar: #a0b8d0;
+            --domain-demeter: #c8a060;
+            --domain-apollo: #f0c040;
+            --domain-poseidon: #4060a0;
+            --domain-hermes: #c060c0;
         }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
             background: var(--bg);
             color: var(--text);
@@ -50,8 +44,6 @@
                 radial-gradient(ellipse at 50% 0%, rgba(126,184,160,0.04) 0%, transparent 60%),
                 radial-gradient(ellipse at 80% 100%, rgba(90,144,112,0.03) 0%, transparent 50%);
         }
-
-        /* ── HEADER ── */
         .header {
             background: var(--surface);
             border-bottom: 1px solid var(--border);
@@ -64,555 +56,109 @@
         }
         .header .icon { font-size: 24px; }
         .header .titles { display: flex; flex-direction: column; }
-        .header .name {
-            font-size: 16px;
-            color: var(--accent-glow);
-            letter-spacing: 1px;
-            font-weight: bold;
-            line-height: 1.2;
-        }
-        .header .subtitle {
-            font-size: 9px;
-            color: var(--silver);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            font-family: var(--font-mono);
-        }
+        .header .name { font-size: 16px; color: var(--accent-glow); letter-spacing: 1px; font-weight: bold; line-height: 1.2; }
+        .header .subtitle { font-size: 9px; color: var(--silver); letter-spacing: 2px; text-transform: uppercase; font-family: var(--font-mono); }
         .header .spacer { flex: 1; }
-        .header .link {
-            font-size: 10px;
-            color: var(--muted);
-            text-decoration: none;
-            font-family: var(--font-mono);
-            letter-spacing: 0.5px;
-            padding: 4px 10px;
-            border: 1px solid var(--border);
-            border-radius: 3px;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
+        .header .link { font-size: 10px; color: var(--muted); text-decoration: none; font-family: var(--font-mono); letter-spacing: 0.5px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 3px; transition: all 0.2s; white-space: nowrap; }
         .header .link:hover { border-color: var(--accent); color: var(--accent); }
-        .header .status-dot {
-            width: 7px; height: 7px;
-            border-radius: 50%;
-            background: var(--accent);
-            box-shadow: 0 0 6px rgba(126,184,160,0.5);
-            flex-shrink: 0;
-        }
-        .header .tier-badge {
-            font-size: 9px;
-            padding: 2px 8px;
-            border-radius: 8px;
-            background: var(--border);
-            color: var(--silver);
-            font-family: var(--font-mono);
-            letter-spacing: 0.5px;
-            border: 1px solid transparent;
-            white-space: nowrap;
-        }
-
-        /* Canvas toggle button — mobile only */
-        .canvas-toggle-btn {
-            display: none;
-            background: var(--border);
-            border: 1px solid var(--accent);
-            color: var(--accent);
-            font-family: var(--font-mono);
-            font-size: 10px;
-            padding: 4px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-            letter-spacing: 0.5px;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
+        .header .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px rgba(126,184,160,0.5); flex-shrink: 0; }
+        .header .tier-badge { font-size: 9px; padding: 2px 8px; border-radius: 8px; background: var(--border); color: var(--silver); font-family: var(--font-mono); letter-spacing: 0.5px; border: 1px solid transparent; white-space: nowrap; }
+        .header .telos-badge { font-size: 9px; padding: 2px 8px; border-radius: 8px; background: rgba(200,160,96,0.1); border: 1px solid rgba(200,160,96,0.3); color: #c8a060; font-family: var(--font-mono); letter-spacing: 0.5px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; cursor: help; }
+        .canvas-toggle-btn { display: none; background: var(--border); border: 1px solid var(--accent); color: var(--accent); font-family: var(--font-mono); font-size: 10px; padding: 4px 10px; border-radius: 3px; cursor: pointer; letter-spacing: 0.5px; transition: all 0.2s; white-space: nowrap; }
         .canvas-toggle-btn:hover { background: var(--accent); color: var(--bg); }
         .canvas-toggle-btn.canvas-active { background: var(--accent); color: var(--bg); }
-
-        /* ── MAIN WORKSPACE ── */
-        .workspace {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
-            min-height: 0;
-        }
-
-        /* ── CHAT PANEL ── */
-        .chat-panel {
-            width: 40%;
-            min-width: 280px;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid var(--border);
-            overflow: hidden;
-            flex-shrink: 0;
-            transition: width 0.3s ease;
-        }
-        .chat-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        /* ── CANVAS PANEL ── */
-        .canvas-panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            background: var(--zone-surface);
-            min-width: 0;
-        }
-
-        .canvas-header {
-            background: var(--surface);
-            border-bottom: 1px solid var(--zone-border);
-            padding: 8px 14px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-        .canvas-header-title {
-            font-family: var(--font-mono);
-            font-size: 10px;
-            color: var(--silver);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
+        .workspace { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+        .chat-panel { width: 40%; min-width: 280px; display: flex; flex-direction: column; border-right: 1px solid var(--border); overflow: hidden; flex-shrink: 0; transition: width 0.3s ease; }
+        .chat-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .canvas-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--zone-surface); min-width: 0; }
+        .canvas-header { background: var(--surface); border-bottom: 1px solid var(--zone-border); padding: 8px 14px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .canvas-header-title { font-family: var(--font-mono); font-size: 10px; color: var(--silver); letter-spacing: 2px; text-transform: uppercase; }
         .canvas-header .spacer { flex: 1; }
-        .canvas-actions {
-            display: flex;
-            gap: 6px;
-        }
-        .canvas-btn {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--muted);
-            font-family: var(--font-mono);
-            font-size: 9px;
-            padding: 3px 8px;
-            border-radius: 2px;
-            cursor: pointer;
-            letter-spacing: 0.5px;
-            transition: all 0.2s;
-        }
+        .canvas-actions { display: flex; gap: 6px; }
+        .canvas-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); font-family: var(--font-mono); font-size: 9px; padding: 3px 8px; border-radius: 2px; cursor: pointer; letter-spacing: 0.5px; transition: all 0.2s; }
         .canvas-btn:hover { border-color: var(--accent); color: var(--accent); }
         .canvas-btn.danger:hover { border-color: #c06060; color: #c06060; }
-
-        /* Canvas block count */
-        .block-count {
-            font-family: var(--font-mono);
-            font-size: 9px;
-            color: var(--muted);
-            padding: 2px 8px;
-            background: var(--border);
-            border-radius: 8px;
-        }
-
-        /* ── CANVAS ZONES ── */
-        .canvas-body {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            gap: 0;
-        }
-
-        /* Hunt Queue */
-        .zone-queue {
-            background: var(--zone-queue);
-            border-bottom: 1px solid var(--zone-border);
-            padding: 8px 14px;
-            flex-shrink: 0;
-            min-height: 36px;
-            max-height: 60px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            overflow: hidden;
-        }
-        .zone-label {
-            font-family: var(--font-mono);
-            font-size: 8px;
-            color: var(--muted);
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            flex-shrink: 0;
-        }
-        .queue-items {
-            display: flex;
-            gap: 6px;
-            flex-wrap: nowrap;
-            overflow: hidden;
-        }
-        .queue-chip {
-            font-family: var(--font-mono);
-            font-size: 9px;
-            padding: 2px 8px;
-            border-radius: 10px;
-            border: 1px solid var(--accent);
-            color: var(--accent);
-            background: rgba(126,184,160,0.07);
-            white-space: nowrap;
-            animation: chipIn 0.3s ease;
-        }
-        @keyframes chipIn {
-            from { opacity: 0; transform: scale(0.8); }
-            to   { opacity: 1; transform: scale(1); }
-        }
-        .queue-empty {
-            font-family: var(--font-mono);
-            font-size: 9px;
-            color: var(--muted);
-            font-style: italic;
-        }
-
-        /* Block Surface */
-        .zone-surface {
-            flex: 1;
-            overflow-y: auto;
-            padding: 12px 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        /* Lexicon Rail */
-        .zone-lexicon {
-            background: var(--zone-lexicon);
-            border-top: 1px solid var(--zone-border);
-            padding: 8px 14px;
-            flex-shrink: 0;
-            max-height: 80px;
-            overflow: hidden;
-        }
-        .lexicon-terms {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            margin-top: 4px;
-            overflow: hidden;
-            max-height: 50px;
-        }
-        .lexicon-term {
-            font-family: var(--font-mono);
-            font-size: 8px;
-            padding: 1px 6px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            color: var(--muted);
-            cursor: pointer;
-            transition: all 0.15s;
-            white-space: nowrap;
-        }
-        .lexicon-term:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-            background: rgba(126,184,160,0.08);
-        }
-        .lexicon-term.active {
-            border-color: var(--accent);
-            color: var(--accent-glow);
-            background: rgba(126,184,160,0.12);
-        }
-
-        /* ── SEMANTIC BLOCKS ── */
-        .canvas-empty {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: var(--muted);
-            font-family: var(--font-mono);
-            font-size: 11px;
-            letter-spacing: 1px;
-            gap: 8px;
-            opacity: 0.5;
-        }
+        .block-count { font-family: var(--font-mono); font-size: 9px; color: var(--muted); padding: 2px 8px; background: var(--border); border-radius: 8px; }
+        .canvas-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; gap: 0; }
+        .zone-queue { background: var(--zone-queue); border-bottom: 1px solid var(--zone-border); padding: 8px 14px; flex-shrink: 0; min-height: 36px; max-height: 60px; display: flex; align-items: center; gap: 8px; overflow: hidden; }
+        .zone-label { font-family: var(--font-mono); font-size: 8px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; flex-shrink: 0; }
+        .queue-items { display: flex; gap: 6px; flex-wrap: nowrap; overflow: hidden; }
+        .queue-chip { font-family: var(--font-mono); font-size: 9px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--accent); color: var(--accent); background: rgba(126,184,160,0.07); white-space: nowrap; animation: chipIn 0.3s ease; }
+        @keyframes chipIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+        .queue-empty { font-family: var(--font-mono); font-size: 9px; color: var(--muted); font-style: italic; }
+        .zone-surface { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+        .zone-lexicon { background: var(--zone-lexicon); border-top: 1px solid var(--zone-border); padding: 8px 14px; flex-shrink: 0; max-height: 80px; overflow: hidden; }
+        .lexicon-terms { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; overflow: hidden; max-height: 50px; }
+        .lexicon-term { font-family: var(--font-mono); font-size: 8px; padding: 1px 6px; border-radius: 8px; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+        .lexicon-term:hover { border-color: var(--accent); color: var(--accent); background: rgba(126,184,160,0.08); }
+        .lexicon-term.active { border-color: var(--accent); color: var(--accent-glow); background: rgba(126,184,160,0.12); }
+        .canvas-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 1px; gap: 8px; opacity: 0.5; }
         .canvas-empty .empty-icon { font-size: 28px; opacity: 0.4; }
-
-        .block {
-            background: var(--surface);
-            border: 1px solid var(--zone-border);
-            border-radius: 6px;
-            padding: 10px 12px;
-            animation: blockLand 0.35s ease;
-            position: relative;
-            transition: border-color 0.2s;
-        }
-        @keyframes blockLand {
-            from { opacity: 0; transform: translateY(-6px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
+        .block { background: var(--surface); border: 1px solid var(--zone-border); border-radius: 6px; padding: 10px 12px; animation: blockLand 0.35s ease; position: relative; transition: border-color 0.2s; }
+        @keyframes blockLand { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
         .block:hover { border-color: var(--green); }
-        .block.pinned {
-            border-color: var(--accent);
-            background: #111e18;
-        }
-        .block.pruned {
-            border-color: #3a2020;
-            background: #0f0e0e;
-            opacity: 0.45;
-        }
-
-        .block-meta {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 6px;
-        }
-        .block-source {
-            font-family: var(--font-mono);
-            font-size: 8px;
-            padding: 1px 6px;
-            border-radius: 8px;
-            border: 1px solid currentColor;
-            opacity: 0.85;
-        }
-        .block-score {
-            font-family: var(--font-mono);
-            font-size: 8px;
-            color: var(--muted);
-        }
-        .block-domain {
-            font-family: var(--font-mono);
-            font-size: 8px;
-            color: var(--muted);
-            margin-left: auto;
-        }
-
-        .block-content {
-            font-size: 12px;
-            line-height: 1.6;
-            color: var(--text);
-        }
+        .block.pinned { border-color: var(--accent); background: #111e18; }
+        .block.pruned { border-color: #3a2020; background: #0f0e0e; opacity: 0.45; }
+        .block-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+        .block-source { font-family: var(--font-mono); font-size: 8px; padding: 1px 6px; border-radius: 8px; border: 1px solid currentColor; opacity: 0.85; }
+        .block-score { font-family: var(--font-mono); font-size: 8px; color: var(--muted); }
+        .block-domain { font-family: var(--font-mono); font-size: 8px; color: var(--muted); margin-left: auto; }
+        .block-content { font-size: 12px; line-height: 1.6; color: var(--text); }
         .block-content a { color: var(--accent); }
-
-        .block-actions {
-            display: flex;
-            gap: 6px;
-            margin-top: 8px;
-            justify-content: flex-end;
-        }
-        .block-action {
-            font-family: var(--font-mono);
-            font-size: 8px;
-            padding: 2px 8px;
-            border-radius: 2px;
-            border: 1px solid var(--border);
-            background: transparent;
-            color: var(--muted);
-            cursor: pointer;
-            transition: all 0.15s;
-            letter-spacing: 0.5px;
-        }
-        .block-action.pin:hover   { border-color: var(--accent); color: var(--accent); }
+        .block-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+        .block-action { font-family: var(--font-mono); font-size: 8px; padding: 2px 8px; border-radius: 2px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px; }
+        .block-action.pin:hover { border-color: var(--accent); color: var(--accent); }
         .block-action.prune:hover { border-color: #c06060; color: #c06060; }
-        .block-action.pin.active  { border-color: var(--accent); color: var(--accent); background: rgba(126,184,160,0.1); }
-        .block-action.prune.active{ border-color: #c06060; color: #c06060; background: rgba(192,96,96,0.08); }
-
-        /* Domain color coding */
-        .domain-hunt_and_pursuit      { color: var(--domain-hunt); }
+        .block-action.pin.active { border-color: var(--accent); color: var(--accent); background: rgba(126,184,160,0.1); }
+        .block-action.prune.active { border-color: #c06060; color: #c06060; background: rgba(192,96,96,0.08); }
+        .domain-hunt_and_pursuit { color: var(--domain-hunt); }
         .domain-wilderness_and_threshold { color: var(--domain-wild); }
-        .domain-semantic_assembly     { color: var(--domain-semantic); }
-        .domain-lunar_and_sacred      { color: var(--domain-lunar); }
-        .domain-demeter_cultivation   { color: var(--domain-demeter); }
-        .domain-apollo_synthesis      { color: var(--domain-apollo); }
-        .domain-poseidon_depth        { color: var(--domain-poseidon); }
-        .domain-hermes_routing        { color: var(--domain-hermes); }
-        .domain-none                  { color: var(--muted); }
-
-        /* Coherence strip */
-        .coherence-strip {
-            font-family: var(--font-mono);
-            font-size: 8px;
-            color: #c8a060;
-            padding: 4px 12px;
-            background: rgba(200,160,96,0.06);
-            border: 1px solid rgba(200,160,96,0.2);
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        /* ── CHAT MESSAGES ── */
-        .message {
-            display: flex;
-            gap: 8px;
-            max-width: 95%;
-            animation: fadeIn 0.3s ease;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        .message.user    { align-self: flex-end; flex-direction: row-reverse; }
+        .domain-semantic_assembly { color: var(--domain-semantic); }
+        .domain-lunar_and_sacred { color: var(--domain-lunar); }
+        .domain-demeter_cultivation { color: var(--domain-demeter); }
+        .domain-apollo_synthesis { color: var(--domain-apollo); }
+        .domain-poseidon_depth { color: var(--domain-poseidon); }
+        .domain-hermes_routing { color: var(--domain-hermes); }
+        .domain-none { color: var(--muted); }
+        .coherence-strip { font-family: var(--font-mono); font-size: 8px; color: #c8a060; padding: 4px 12px; background: rgba(200,160,96,0.06); border: 1px solid rgba(200,160,96,0.2); border-radius: 4px; display: flex; align-items: center; gap: 6px; }
+        .message { display: flex; gap: 8px; max-width: 95%; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .message.user { align-self: flex-end; flex-direction: row-reverse; }
         .message.artemis { align-self: flex-start; }
-
-        .avatar {
-            width: 30px; height: 30px;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 15px; flex-shrink: 0;
-        }
-        .message.user .avatar    { background: var(--border); }
+        .avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+        .message.user .avatar { background: var(--border); }
         .message.artemis .avatar { background: #1a2a24; border: 1px solid var(--green); }
-
-        .bubble {
-            padding: 10px 13px;
-            border-radius: 10px;
-            font-size: 13px;
-            line-height: 1.6;
-        }
-        .message.user .bubble {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text-bright);
-        }
-        .message.artemis .bubble {
-            background: #111a16;
-            border: 1px solid #1a3025;
-            color: var(--text);
-        }
-        .bubble .memory-note {
-            font-size: 10px; color: var(--silver);
-            font-style: italic; margin-top: 5px;
-            padding-top: 5px; border-top: 1px solid var(--border);
-        }
-        .bubble .tier-tag {
-            font-size: 8px; color: var(--muted);
-            font-family: var(--font-mono);
-            letter-spacing: 0.5px; margin-top: 4px;
-        }
-
-        /* Typing indicator */
+        .bubble { padding: 10px 13px; border-radius: 10px; font-size: 13px; line-height: 1.6; }
+        .message.user .bubble { background: var(--surface); border: 1px solid var(--border); color: var(--text-bright); }
+        .message.artemis .bubble { background: #111a16; border: 1px solid #1a3025; color: var(--text); }
+        .bubble .memory-note { font-size: 10px; color: var(--silver); font-style: italic; margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--border); }
+        .bubble .tier-tag { font-size: 8px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 0.5px; margin-top: 4px; }
         .typing-indicator { display: flex; gap: 4px; padding: 6px 0; }
-        .typing-indicator span {
-            width: 5px; height: 5px; border-radius: 50%;
-            background: var(--muted);
-            animation: typePulse 1.4s infinite;
-        }
+        .typing-indicator span { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: typePulse 1.4s infinite; }
         .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
         .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes typePulse {
-            0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
-            30%            { opacity: 1;   transform: scale(1.1); }
-        }
-
-        /* Welcome */
-        .welcome {
-            text-align: center; padding: 30px 16px; color: var(--silver);
-        }
+        @keyframes typePulse { 0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); } 30% { opacity: 1; transform: scale(1.1); } }
+        .welcome { text-align: center; padding: 30px 16px; color: var(--silver); }
         .welcome .big-icon { font-size: 36px; margin-bottom: 10px; }
-        .welcome h2 {
-            color: var(--accent-glow); font-size: 18px;
-            margin-bottom: 6px; letter-spacing: 1px;
-        }
+        .welcome h2 { color: var(--accent-glow); font-size: 18px; margin-bottom: 6px; letter-spacing: 1px; }
         .welcome p { font-size: 12px; line-height: 1.7; }
-
-        /* ── INPUT BAR ── */
-        .input-bar {
-            background: var(--surface);
-            border-top: 1px solid var(--border);
-            padding: 10px 16px;
-            display: flex;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-        .input-bar textarea {
-            flex: 1;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text-bright);
-            padding: 10px 14px;
-            font-family: var(--font-body);
-            font-size: 13px;
-            border-radius: 6px;
-            outline: none;
-            resize: none;
-            max-height: 100px;
-            transition: border-color 0.2s;
-            line-height: 1.5;
-        }
+        .input-bar { background: var(--surface); border-top: 1px solid var(--border); padding: 10px 16px; display: flex; gap: 8px; flex-shrink: 0; }
+        .input-bar textarea { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text-bright); padding: 10px 14px; font-family: var(--font-body); font-size: 13px; border-radius: 6px; outline: none; resize: none; max-height: 100px; transition: border-color 0.2s; line-height: 1.5; }
         .input-bar textarea:focus { border-color: var(--accent); }
         .input-bar textarea::placeholder { color: #3a4a40; font-style: italic; }
-        .input-bar button {
-            background: var(--accent);
-            border: none;
-            color: var(--bg);
-            padding: 10px 20px;
-            font-family: var(--font-mono);
-            font-size: 11px;
-            cursor: pointer;
-            border-radius: 6px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
-        .input-bar button:hover {
-            background: var(--accent-glow);
-            box-shadow: 0 0 14px rgba(126,184,160,0.3);
-        }
-        .input-bar button:disabled {
-            background: var(--border); color: var(--muted);
-            cursor: not-allowed; box-shadow: none;
-        }
-
-        /* ── SCROLLBARS ── */
+        .input-bar button { background: var(--accent); border: none; color: var(--bg); padding: 10px 20px; font-family: var(--font-mono); font-size: 11px; cursor: pointer; border-radius: 6px; font-weight: bold; letter-spacing: 1px; transition: all 0.2s; white-space: nowrap; }
+        .input-bar button:hover { background: var(--accent-glow); box-shadow: 0 0 14px rgba(126,184,160,0.3); }
+        .input-bar button:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; box-shadow: none; }
         ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-        /* ── TYPING AREA ── */
-        #typingArea {
-            padding: 0 16px 8px;
-            flex-shrink: 0;
-        }
-
-        /* ══════════════════════════════════
-           MOBILE — toggle between views
-           ══════════════════════════════════ */
+        #typingArea { padding: 0 16px 8px; flex-shrink: 0; }
         @media (max-width: 768px) {
             .canvas-toggle-btn { display: block; }
-
-            .chat-panel {
-                width: 100%;
-                min-width: 0;
-                border-right: none;
-                position: absolute;
-                top: 0; left: 0; right: 0; bottom: 0;
-                z-index: 10;
-                transition: opacity 0.25s, transform 0.25s;
-            }
-            .canvas-panel {
-                position: absolute;
-                top: 0; left: 0; right: 0; bottom: 0;
-                z-index: 9;
-                opacity: 0;
-                pointer-events: none;
-                transform: translateX(100%);
-                transition: opacity 0.25s, transform 0.25s;
-            }
-
-            /* When canvas is active on mobile */
-            body.canvas-view .chat-panel {
-                opacity: 0;
-                pointer-events: none;
-                transform: translateX(-100%);
-            }
-            body.canvas-view .canvas-panel {
-                opacity: 1;
-                pointer-events: all;
-                transform: translateX(0);
-            }
-
+            .chat-panel { width: 100%; min-width: 0; border-right: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10; transition: opacity 0.25s, transform 0.25s; }
+            .canvas-panel { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 9; opacity: 0; pointer-events: none; transform: translateX(100%); transition: opacity 0.25s, transform 0.25s; }
+            body.canvas-view .chat-panel { opacity: 0; pointer-events: none; transform: translateX(-100%); }
+            body.canvas-view .canvas-panel { opacity: 1; pointer-events: all; transform: translateX(0); }
             .workspace { position: relative; }
             .input-bar { position: relative; z-index: 20; }
         }
@@ -620,25 +166,24 @@
 </head>
 <body>
 
-    <!-- ══ HEADER ══ -->
+    <!-- HEADER -->
     <div class="header">
         <span class="icon">🏹</span>
         <div class="titles">
             <span class="name">Artemis</span>
-            <span class="subtitle">Goddess of the Hunt · EaldfornAI</span>
+            <span class="subtitle">Goddess of the Hunt · Order of Olympus</span>
         </div>
         <span class="spacer"></span>
-        <span class="tier-badge" id="tierBadge" title="Current text tier">● TIER</span>
+        <span class="telos-badge" id="telosBadge" title="Active Telos">🎯 Loading telos...</span>
+        <span class="tier-badge" id="tierBadge" title="Current tier">● READY</span>
         <span class="status-dot" id="statusDot" title="Agent Status"></span>
         <button class="canvas-toggle-btn" id="canvasToggle" onclick="toggleCanvasView()">⟡ CANVAS</button>
-        <a href="../ealdforn-studio/index.html" class="link">◈ Ealdforn Studios</a>
-        <a href="../nexus/index.html" class="link">◈ NEXUS</a>
+        <a href="/nexus/" class="link">◈ NEXUS</a>
+        <a href="/wiki/" class="link">📜 ARCHIVE</a>
     </div>
 
-    <!-- ══ WORKSPACE ══ -->
+    <!-- WORKSPACE -->
     <div class="workspace">
-
-        <!-- ── CHAT PANEL ── -->
         <div class="chat-panel">
             <div class="chat-area" id="chatArea">
                 <div class="welcome" id="welcomeMsg">
@@ -651,39 +196,27 @@
             <div id="typingArea" style="display:none;">
                 <div class="message artemis">
                     <div class="avatar">🏹</div>
-                    <div class="bubble">
-                        <div class="typing-indicator"><span></span><span></span><span></span></div>
-                    </div>
+                    <div class="bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>
                 </div>
             </div>
         </div>
 
-        <!-- ── CANVAS PANEL ── -->
         <div class="canvas-panel">
-
-            <!-- Canvas Header -->
             <div class="canvas-header">
                 <span style="font-size:14px;">⟡</span>
                 <span class="canvas-header-title">Hunt Canvas</span>
                 <span class="block-count" id="blockCount">0 blocks</span>
                 <span class="spacer"></span>
                 <div class="canvas-actions">
-                    <button class="canvas-btn" onclick="Canvas.export()" title="Export pinned blocks as JSON">↓ EXPORT</button>
-                    <button class="canvas-btn danger" onclick="Canvas.clear()" title="Clear all blocks">✕ CLEAR</button>
+                    <button class="canvas-btn" onclick="Canvas.export()">↓ EXPORT</button>
+                    <button class="canvas-btn danger" onclick="Canvas.clear()">✕ CLEAR</button>
                 </div>
             </div>
-
             <div class="canvas-body">
-
-                <!-- Zone: Hunt Queue -->
                 <div class="zone-queue" id="zoneQueue">
                     <span class="zone-label">Queue</span>
-                    <div class="queue-items" id="queueItems">
-                        <span class="queue-empty">awaiting hunt...</span>
-                    </div>
+                    <div class="queue-items" id="queueItems"><span class="queue-empty">awaiting hunt...</span></div>
                 </div>
-
-                <!-- Zone: Block Surface -->
                 <div class="zone-surface" id="zoneSurface">
                     <div class="canvas-empty" id="canvasEmpty">
                         <span class="empty-icon">🏹</span>
@@ -691,26 +224,21 @@
                         <span style="font-size:9px;margin-top:4px;">Cards will write blocks here.</span>
                     </div>
                 </div>
-
-                <!-- Zone: Lexicon Rail -->
                 <div class="zone-lexicon" id="zoneLexicon">
                     <span class="zone-label">Lexicon · <span id="lexiconDomain" style="color:var(--accent);">artemis active</span></span>
                     <div class="lexicon-terms" id="lexiconTerms"></div>
                 </div>
-
             </div>
         </div>
-
     </div>
 
-    <!-- ══ INPUT BAR ══ -->
+    <!-- INPUT BAR -->
     <div class="input-bar">
-        <textarea id="userInput" placeholder="Speak your query to Artemis..." rows="1"
-            autocomplete="off" onkeydown="handleKeyDown(event)"></textarea>
+        <textarea id="userInput" placeholder="Speak your query to Artemis..." rows="1" autocomplete="off" onkeydown="handleKeyDown(event)"></textarea>
         <button id="btnSend" onclick="sendMessage()">HUNT</button>
     </div>
 
-    <!-- ══ SCRIPTS ══ -->
+    <!-- SCRIPTS -->
     <script src="cards/config.js"></script>
     <script src="cards/decisionLog.js"></script>
     <script src="cards/gaiaRecall.js"></script>
@@ -722,551 +250,211 @@
     <script src="cards/statusReport.js"></script>
     <script src="cards/greeting.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/nexus/olympian-bridge.js"></script>
     <script src="agent.js"></script>
 
     <script>
-    // ════════════════════════════════════════════
+    // ═══════════════════════════════════
     // CANVAS MANAGER
-    // The card table surface. Cards write here.
-    // Pin/Prune signals feed CardVoter training.
-    // ════════════════════════════════════════════
+    // ═══════════════════════════════════
     var Canvas = (function() {
-        var blocks = [];
-        var blockIdCounter = 0;
-        var pinnedIds = new Set();
-        var prunedIds = new Set();
-
-        // Domain color map
+        var blocks = [], blockIdCounter = 0, pinnedIds = new Set(), prunedIds = new Set();
         var domainColors = {
-            'hunt_and_pursuit':         '#7eb8a0',
-            'wilderness_and_threshold': '#5a9070',
-            'semantic_assembly':        '#9aada0',
-            'lunar_and_sacred':         '#a0b8d0',
-            'demeter_cultivation':      '#c8a060',
-            'apollo_synthesis':         '#f0c040',
-            'poseidon_depth':           '#4060a0',
-            'hermes_routing':           '#c060c0',
+            'hunt_and_pursuit':'#7eb8a0','wilderness_and_threshold':'#5a9070','semantic_assembly':'#9aada0',
+            'lunar_and_sacred':'#a0b8d0','demeter_cultivation':'#c8a060','apollo_synthesis':'#f0c040',
+            'poseidon_depth':'#4060a0','hermes_routing':'#c060c0'
         };
-
-        // Score a block against active lexicon domains
         function scoreBlock(content) {
-            if (typeof LEXICON_CONFIG === 'undefined') return { score: 0, domain: 'none', hits: [] };
-            var text = content.toLowerCase();
-            var bestDomain = 'none';
-            var bestScore = 0;
-            var allHits = [];
-            var domainsHit = 0;
-
-            var cfg = LEXICON_CONFIG.scoring;
-            var domains = LEXICON_CONFIG.domains;
-
-            Object.keys(domains).forEach(function(domainKey) {
-                var domain = domains[domainKey];
+            if (typeof LEXICON_CONFIG === 'undefined') return { score:0, domain:'none', hits:[] };
+            var text = content.toLowerCase(), bestDomain = 'none', bestScore = 0, allHits = [], domainsHit = 0;
+            var cfg = LEXICON_CONFIG.scoring, domains = LEXICON_CONFIG.domains;
+            Object.keys(domains).forEach(function(dk) {
+                var domain = domains[dk];
                 if (!domain.terms || domain.weight === 0) return;
-
-                var hits = domain.terms.filter(function(term) {
-                    return text.indexOf(term.toLowerCase()) > -1;
-                });
-
+                var hits = domain.terms.filter(function(t) { return text.indexOf(t.toLowerCase()) > -1; });
                 if (hits.length >= (cfg.minTermHits || 2)) {
                     domainsHit++;
                     var score = Math.min(hits.length * (cfg.scorePerHit || 0.1) * domain.weight, cfg.maxScore || 1.0);
                     allHits = allHits.concat(hits);
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestDomain = domainKey;
-                    }
+                    if (score > bestScore) { bestScore = score; bestDomain = dk; }
                 }
             });
-
-            // Cross-domain bonus
-            if (domainsHit > 1 && cfg.crossDomainBonus) {
-                bestScore = Math.min(bestScore + cfg.crossDomainBonus, 1.0);
-            }
-
-            return {
-                score: Math.round(bestScore * 100) / 100,
-                domain: bestDomain,
-                hits: allHits.slice(0, 8)
-            };
+            if (domainsHit > 1 && cfg.crossDomainBonus) bestScore = Math.min(bestScore + cfg.crossDomainBonus, 1.0);
+            return { score: Math.round(bestScore*100)/100, domain: bestDomain, hits: allHits.slice(0,8) };
         }
-
-        function updateBlockCount() {
-            var el = document.getElementById('blockCount');
-            if (el) el.textContent = blocks.length + ' block' + (blocks.length !== 1 ? 's' : '');
-        }
-
-        function hideEmpty() {
-            var el = document.getElementById('canvasEmpty');
-            if (el) el.style.display = 'none';
-        }
-
-        function showEmpty() {
-            var el = document.getElementById('canvasEmpty');
-            if (el) el.style.display = 'flex';
-        }
-
-        // Render a single block to DOM
+        function updateBlockCount() { var el = document.getElementById('blockCount'); if (el) el.textContent = blocks.length + ' block' + (blocks.length !== 1 ? 's' : ''); }
+        function hideEmpty() { var el = document.getElementById('canvasEmpty'); if (el) el.style.display = 'none'; }
+        function showEmpty() { var el = document.getElementById('canvasEmpty'); if (el) el.style.display = 'flex'; }
         function renderBlock(block) {
-            var surface = document.getElementById('zoneSurface');
-            if (!surface) return;
-
+            var surface = document.getElementById('zoneSurface'); if (!surface) return;
             hideEmpty();
-
-            var domainColor = domainColors[block.domain] || '#5a6a5a';
-            var domainLabel = block.domain !== 'none'
-                ? block.domain.replace(/_/g, ' ')
-                : '—';
-
-            var el = document.createElement('div');
-            el.className = 'block';
-            el.id = 'block-' + block.id;
-            el.dataset.blockId = block.id;
-
-            // Score bar width
-            var scorePct = Math.round(block.score * 100);
-
+            var dc = domainColors[block.domain] || '#5a6a5a';
+            var dl = block.domain !== 'none' ? block.domain.replace(/_/g,' ') : '—';
+            var el = document.createElement('div'); el.className = 'block'; el.id = 'block-' + block.id; el.dataset.blockId = block.id;
             el.innerHTML =
                 '<div class="block-meta">' +
-                    '<span class="block-source domain-' + block.domain + '" style="border-color:' + domainColor + ';color:' + domainColor + ';">' +
-                        (block.sourceIcon || '🏹') + ' ' + (block.source || 'hunt') +
-                    '</span>' +
-                    '<span class="block-score">⟡ ' + scorePct + '%</span>' +
-                    (block.hits && block.hits.length > 0
-                        ? '<span class="block-score" style="color:' + domainColor + ';">' + block.hits.slice(0,3).join(' · ') + '</span>'
-                        : '') +
-                    '<span class="block-domain">' + domainLabel + '</span>' +
-                '</div>' +
-                '<div class="block-content">' + formatBlockContent(block.content) + '</div>' +
+                '<span class="block-source domain-' + block.domain + '" style="border-color:' + dc + ';color:' + dc + ';">' + (block.sourceIcon||'🏹') + ' ' + (block.source||'hunt') + '</span>' +
+                '<span class="block-score">⟡ ' + Math.round(block.score*100) + '%</span>' +
+                (block.hits && block.hits.length > 0 ? '<span class="block-score" style="color:' + dc + ';">' + block.hits.slice(0,3).join(' · ') + '</span>' : '') +
+                '<span class="block-domain">' + dl + '</span></div>' +
+                '<div class="block-content">' + (block.content||'').replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank">$1</a>').replace(/\n/g,'<br>') + '</div>' +
                 '<div class="block-actions">' +
-                    '<button class="block-action pin" id="pin-' + block.id + '" onclick="Canvas.pin(' + block.id + ')">◈ PIN</button>' +
-                    '<button class="block-action prune" id="prune-' + block.id + '" onclick="Canvas.prune(' + block.id + ')">✕ PRUNE</button>' +
-                '</div>';
-
-            surface.appendChild(el);
-            surface.scrollTop = surface.scrollHeight;
+                '<button class="block-action pin" id="pin-' + block.id + '" onclick="Canvas.pin(' + block.id + ')">◈ PIN</button>' +
+                '<button class="block-action prune" id="prune-' + block.id + '" onclick="Canvas.prune(' + block.id + ')">✕ PRUNE</button></div>';
+            surface.appendChild(el); surface.scrollTop = surface.scrollHeight;
         }
-
-        function formatBlockContent(text) {
-            if (!text) return '';
-            text = String(text);
-            text = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank">$1</a>');
-            text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-            text = text.replace(/\n/g, '<br>');
-            return text;
-        }
-
-        // ── PUBLIC API ──
-
-        function append(blockData) {
-            // blockData: { source, sourceIcon, content, cardId }
-            blockIdCounter++;
-            var scored = scoreBlock(blockData.content || '');
-
-            var block = {
-                id: blockIdCounter,
-                source: blockData.source || 'unknown',
-                sourceIcon: blockData.sourceIcon || '🏹',
-                content: blockData.content || '',
-                cardId: blockData.cardId || null,
-                score: scored.score,
-                domain: scored.domain,
-                hits: scored.hits,
-                timestamp: new Date().toISOString(),
-                pinned: false,
-                pruned: false
-            };
-
-            blocks.push(block);
-            renderBlock(block);
-            updateBlockCount();
-
-            return block.id;
-        }
-
-        function pin(blockId) {
-            var block = blocks.find(function(b) { return b.id === blockId; });
-            if (!block) return;
-
-            if (block.pinned) {
-                // Unpin
-                block.pinned = false;
-                pinnedIds.delete(blockId);
-                var el = document.getElementById('block-' + blockId);
-                if (el) el.classList.remove('pinned');
-                var btn = document.getElementById('pin-' + blockId);
-                if (btn) btn.classList.remove('active');
-            } else {
-                block.pinned = true;
-                block.pruned = false;
-                pinnedIds.add(blockId);
-                prunedIds.delete(blockId);
-                var el2 = document.getElementById('block-' + blockId);
-                if (el2) { el2.classList.add('pinned'); el2.classList.remove('pruned'); }
-                var pinBtn = document.getElementById('pin-' + blockId);
-                if (pinBtn) pinBtn.classList.add('active');
-                var pruneBtn = document.getElementById('prune-' + blockId);
-                if (pruneBtn) pruneBtn.classList.remove('active');
-            }
-
-            // CardVoter training signal
-            recordFeedback(blockId, block.pinned ? 'pin' : 'unpin', block);
-        }
-
-        function prune(blockId) {
-            var block = blocks.find(function(b) { return b.id === blockId; });
-            if (!block) return;
-
-            if (block.pruned) {
-                block.pruned = false;
-                prunedIds.delete(blockId);
-                var el = document.getElementById('block-' + blockId);
-                if (el) el.classList.remove('pruned');
-                var btn = document.getElementById('prune-' + blockId);
-                if (btn) btn.classList.remove('active');
-            } else {
-                block.pruned = true;
-                block.pinned = false;
-                prunedIds.add(blockId);
-                pinnedIds.delete(blockId);
-                var el2 = document.getElementById('block-' + blockId);
-                if (el2) { el2.classList.add('pruned'); el2.classList.remove('pinned'); }
-                var pruneBtn2 = document.getElementById('prune-' + blockId);
-                if (pruneBtn2) pruneBtn2.classList.add('active');
-                var pinBtn2 = document.getElementById('pin-' + blockId);
-                if (pinBtn2) pinBtn2.classList.remove('active');
-            }
-
-            recordFeedback(blockId, block.pruned ? 'prune' : 'unprune', block);
-        }
-
         function recordFeedback(blockId, action, block) {
-            // Write feedback to localStorage for CardVoter
             try {
-                var key = 'artemis_canvas_feedback';
-                var existing = JSON.parse(localStorage.getItem(key) || '[]');
-                existing.push({
-                    blockId: blockId,
-                    action: action,
-                    cardId: block.cardId,
-                    source: block.source,
-                    domain: block.domain,
-                    score: block.score,
-                    timestamp: new Date().toISOString()
-                });
+                var key = 'artemis_canvas_feedback', existing = JSON.parse(localStorage.getItem(key) || '[]');
+                existing.push({ blockId:blockId, action:action, cardId:block.cardId, source:block.source, domain:block.domain, score:block.score, timestamp:new Date().toISOString() });
                 if (existing.length > 500) existing.splice(0, existing.length - 500);
                 localStorage.setItem(key, JSON.stringify(existing));
-                console.log('[Canvas] Feedback recorded: ' + action + ' on block-' + blockId + ' (' + block.source + ')');
             } catch(e) {}
         }
-
-        function clear(zone) {
-            if (!zone) {
-                // Clear all
-                blocks = [];
-                pinnedIds.clear();
-                prunedIds.clear();
-                var surface = document.getElementById('zoneSurface');
-                if (surface) {
-                    surface.innerHTML = '<div class="canvas-empty" id="canvasEmpty"><span class="empty-icon">🏹</span><span>The canvas awaits the hunt.</span><span style="font-size:9px;margin-top:4px;">Cards will write blocks here.</span></div>';
-                }
-                updateBlockCount();
-                clearQueue();
-            }
-        }
-
-        function exportPinned() {
-            var pinned = blocks.filter(function(b) { return b.pinned; });
-            var data = JSON.stringify(pinned, null, 2);
-            var blob = new Blob([data], { type: 'application/json' });
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = 'artemis-canvas-' + Date.now() + '.json';
-            a.click();
-            URL.revokeObjectURL(url);
-            console.log('[Canvas] Exported ' + pinned.length + ' pinned blocks.');
-        }
-
-        function setQueue(items) {
-            var el = document.getElementById('queueItems');
-            if (!el) return;
-            if (!items || items.length === 0) {
-                el.innerHTML = '<span class="queue-empty">awaiting hunt...</span>';
-                return;
-            }
-            el.innerHTML = items.map(function(item) {
-                return '<span class="queue-chip">' + item + '</span>';
-            }).join('');
-        }
-
-        function clearQueue() {
-            setQueue([]);
-        }
-
-        function setLexicon(terms) {
-            // terms: array of strings or domain key
-            var el = document.getElementById('lexiconTerms');
-            if (!el) return;
-
-            if (typeof LEXICON_CONFIG !== 'undefined') {
-                // Build from active domains
-                var allTerms = [];
-                Object.keys(LEXICON_CONFIG.domains).forEach(function(key) {
-                    var domain = LEXICON_CONFIG.domains[key];
-                    if (domain.weight > 0) {
-                        domain.terms.slice(0, 6).forEach(function(term) {
-                            allTerms.push({ term: term, domain: key, color: domainColors[key] || '#5a6a5a' });
-                        });
-                    }
-                });
-                el.innerHTML = allTerms.map(function(t) {
-                    return '<span class="lexicon-term" style="border-color:' + t.color + '22;color:' + t.color + '88;" ' +
-                        'onclick="Canvas.huntTerm(\'' + t.term + '\')" title="' + t.domain.replace(/_/g, ' ') + '">' +
-                        t.term + '</span>';
-                }).join('');
-            } else if (terms) {
-                el.innerHTML = terms.map(function(t) {
-                    return '<span class="lexicon-term" onclick="Canvas.huntTerm(\'' + t + '\')">' + t + '</span>';
-                }).join('');
-            }
-        }
-
-        function huntTerm(term) {
-            // Clicking a lexicon term fires a hunt
-            var input = document.getElementById('userInput');
-            if (input) {
-                input.value = 'what is ' + term;
-                input.focus();
-            }
-        }
-
-        function addCoherenceNote(note) {
-            var surface = document.getElementById('zoneSurface');
-            if (!surface) return;
-            hideEmpty();
-            var el = document.createElement('div');
-            el.className = 'coherence-strip';
-            el.innerHTML = '⟡ ' + note;
-            surface.appendChild(el);
-        }
-
-        function getStats() {
-            return {
-                total: blocks.length,
-                pinned: pinnedIds.size,
-                pruned: prunedIds.size,
-                active: blocks.length - prunedIds.size
-            };
-        }
-
         return {
-            append: append,
-            pin: pin,
-            prune: prune,
-            clear: clear,
-            export: exportPinned,
-            setQueue: setQueue,
-            clearQueue: clearQueue,
-            setLexicon: setLexicon,
-            huntTerm: huntTerm,
-            addCoherenceNote: addCoherenceNote,
-            getStats: getStats
+            append: function(bd) {
+                blockIdCounter++; var scored = scoreBlock(bd.content||'');
+                var block = { id:blockIdCounter, source:bd.source||'unknown', sourceIcon:bd.sourceIcon||'🏹', content:bd.content||'', cardId:bd.cardId||null, score:scored.score, domain:scored.domain, hits:scored.hits, timestamp:new Date().toISOString(), pinned:false, pruned:false };
+                blocks.push(block); renderBlock(block); updateBlockCount(); return block.id;
+            },
+            pin: function(id) {
+                var b = blocks.find(function(x) { return x.id === id; }); if (!b) return;
+                if (b.pinned) { b.pinned = false; pinnedIds.delete(id); var el = document.getElementById('block-' + id); if (el) el.classList.remove('pinned'); var btn = document.getElementById('pin-' + id); if (btn) btn.classList.remove('active'); }
+                else { b.pinned = true; b.pruned = false; pinnedIds.add(id); prunedIds.delete(id); var el2 = document.getElementById('block-' + id); if (el2) { el2.classList.add('pinned'); el2.classList.remove('pruned'); } var pb = document.getElementById('pin-' + id); if (pb) pb.classList.add('active'); var prb = document.getElementById('prune-' + id); if (prb) prb.classList.remove('active'); }
+                recordFeedback(id, b.pinned ? 'pin' : 'unpin', b);
+            },
+            prune: function(id) {
+                var b = blocks.find(function(x) { return x.id === id; }); if (!b) return;
+                if (b.pruned) { b.pruned = false; prunedIds.delete(id); var el = document.getElementById('block-' + id); if (el) el.classList.remove('pruned'); var btn = document.getElementById('prune-' + id); if (btn) btn.classList.remove('active'); }
+                else { b.pruned = true; b.pinned = false; prunedIds.add(id); pinnedIds.delete(id); var el2 = document.getElementById('block-' + id); if (el2) { el2.classList.add('pruned'); el2.classList.remove('pinned'); } var prb2 = document.getElementById('prune-' + id); if (prb2) prb2.classList.add('active'); var pb2 = document.getElementById('pin-' + id); if (pb2) pb2.classList.remove('active'); }
+                recordFeedback(id, b.pruned ? 'prune' : 'unprune', b);
+            },
+            clear: function() { blocks = []; pinnedIds.clear(); prunedIds.clear(); var s = document.getElementById('zoneSurface'); if (s) s.innerHTML = '<div class="canvas-empty" id="canvasEmpty"><span class="empty-icon">🏹</span><span>The canvas awaits the hunt.</span></div>'; updateBlockCount(); },
+            export: function() { var pinned = blocks.filter(function(b) { return b.pinned; }); var data = JSON.stringify(pinned,null,2); var blob = new Blob([data],{type:'application/json'}); var url = URL.createObjectURL(blob); var a = document.createElement('a'); a.href = url; a.download = 'artemis-canvas-' + Date.now() + '.json'; a.click(); URL.revokeObjectURL(url); },
+            setQueue: function(items) { var el = document.getElementById('queueItems'); if (!el) return; el.innerHTML = (!items||items.length===0) ? '<span class="queue-empty">awaiting hunt...</span>' : items.map(function(i) { return '<span class="queue-chip">' + i + '</span>'; }).join(''); },
+            clearQueue: function() { this.setQueue([]); },
+            setLexicon: function() { var el = document.getElementById('lexiconTerms'); if (!el) return; if (typeof LEXICON_CONFIG !== 'undefined') { var allTerms = []; Object.keys(LEXICON_CONFIG.domains).forEach(function(k) { var d = LEXICON_CONFIG.domains[k]; if (d.weight>0) d.terms.slice(0,6).forEach(function(t) { allTerms.push({ term:t, domain:k, color:domainColors[k]||'#5a6a5a' }); }); }); el.innerHTML = allTerms.map(function(t) { return '<span class="lexicon-term" style="border-color:' + t.color + '22;color:' + t.color + '88;" onclick="Canvas.huntTerm(\'' + t.term + '\')">' + t.term + '</span>'; }).join(''); } },
+            huntTerm: function(term) { var input = document.getElementById('userInput'); if (input) { input.value = 'what is ' + term; input.focus(); } },
+            addCoherenceNote: function(note) { var s = document.getElementById('zoneSurface'); if (!s) return; hideEmpty(); var el = document.createElement('div'); el.className = 'coherence-strip'; el.innerHTML = '⟡ ' + note; s.appendChild(el); },
+            getStats: function() { return { total:blocks.length, pinned:pinnedIds.size, pruned:prunedIds.size, active:blocks.length - prunedIds.size }; }
         };
     })();
 
+    function toggleCanvasView() { var body = document.body, btn = document.getElementById('canvasToggle'); var isCanvas = body.classList.toggle('canvas-view'); btn.textContent = isCanvas ? '💬 CHAT' : '⟡ CANVAS'; btn.classList.toggle('canvas-active', isCanvas); }
 
-    // ════════════════════════════════════════════
-    // MOBILE CANVAS TOGGLE
-    // ════════════════════════════════════════════
-    function toggleCanvasView() {
-        var body = document.body;
-        var btn = document.getElementById('canvasToggle');
-        var isCanvas = body.classList.toggle('canvas-view');
-        btn.textContent = isCanvas ? '💬 CHAT' : '⟡ CANVAS';
-        btn.classList.toggle('canvas-active', isCanvas);
-    }
-
-
-    // ════════════════════════════════════════════
-    // RESULT → CANVAS BRIDGE
-    // Reads agent outputs and writes blocks to Canvas
-    // ════════════════════════════════════════════
     function bridgeToCanvas(result, userInput) {
-        var outputs = result.metadata && result.metadata.outputs
-            ? result.metadata.outputs
-            : {};
-
         var cardsPlayed = result.metadata ? result.metadata.cardsPlayed : [];
-        var blockCount = 0;
-
-        // Update hunt queue
-        Canvas.setQueue(cardsPlayed.map(function(c) { return c; }));
-
-        // Parse the assembled text into blocks by source prefix
-        var text = result.text || '';
-        var sections = text.split(/\n(?=(?:📜 FROM|🏹 FROM|📁 FROM|⟡ TRACKS))/);
-
+        Canvas.setQueue(cardsPlayed);
+        var text = result.text || '', sections = text.split(/\n(?=(?:📜 FROM|🏹 FROM|📁 FROM|⟡ TRACKS))/), blockCount = 0;
         sections.forEach(function(section) {
-            section = section.trim();
-            if (!section) return;
-
-            var source = 'hunt';
-            var icon = '🏹';
-
+            section = section.trim(); if (!section || section.length < 20) return;
+            var source = 'hunt', icon = '🏹';
             if (section.indexOf('📜 FROM MEMORY') === 0) { source = 'memory'; icon = '📜'; }
-            else if (section.indexOf('🏹 FROM') === 0) {
-                var match = section.match(/🏹 FROM ([^:]+):/);
-                source = match ? match[1].toLowerCase() : 'api';
-                icon = '🏹';
-            }
+            else if (section.indexOf('🏹 FROM') === 0) { var m = section.match(/🏹 FROM ([^:]+):/); source = m ? m[1].toLowerCase() : 'api'; }
             else if (section.indexOf('📁 FROM REPOSITORY') === 0) { source = 'repository'; icon = '📁'; }
             else if (section.indexOf('⟡ TRACKS CONVERGE') === 0) { source = 'correlation'; icon = '⟡'; }
-            else if (section.length < 20) return; // skip tiny fragments
-
-            Canvas.append({
-                source: source,
-                sourceIcon: icon,
-                content: section,
-                cardId: cardsPlayed[0] || null
-            });
-            blockCount++;
+            Canvas.append({ source:source, sourceIcon:icon, content:section, cardId:cardsPlayed[0]||null }); blockCount++;
         });
-
-        // If no sections parsed but there's text, append as one block
-        if (blockCount === 0 && text && text.length > 20) {
-            Canvas.append({
-                source: cardsPlayed[0] || 'hunt',
-                sourceIcon: '🏹',
-                content: text,
-                cardId: cardsPlayed[0] || null
-            });
-        }
-
-        // Coherence check — if correlations exist in text
-        if (text.indexOf('TRACKS CONVERGE') > -1) {
-            Canvas.addCoherenceNote('Cross-source correlation detected in this hunt.');
-        }
-
-        // Clear queue after a delay
+        if (blockCount === 0 && text && text.length > 20) Canvas.append({ source:cardsPlayed[0]||'hunt', sourceIcon:'🏹', content:text, cardId:cardsPlayed[0]||null });
+        if (text.indexOf('TRACKS CONVERGE') > -1) Canvas.addCoherenceNote('Cross-source correlation detected.');
         setTimeout(function() { Canvas.clearQueue(); }, 3000);
     }
 
-
-    // ════════════════════════════════════════════
-    // CHAT ENGINE (unchanged pipeline)
-    // ════════════════════════════════════════════
-    var isProcessing = false;
-    var messageCount = 0;
-    var conversationHistory = [];
-    var currentTier = '—';
+    // ═══════════════════════════════════
+    // CHAT ENGINE
+    // ═══════════════════════════════════
+    var isProcessing = false, messageCount = 0, conversationHistory = [], currentTier = '—';
 
     async function boot() {
-        console.log('[Artemis Chat] Booting...');
+        console.log('[Artemis] Booting...');
         var success = await ArtemisAgent.init();
-
         if (success) {
             var status = ArtemisAgent.getStatus();
-            document.getElementById('statusDot').title =
-                'Online · ' + status.cardsLoaded + ' cards · ' + status.classifierMode;
+            document.getElementById('statusDot').title = 'Online · ' + status.cardsLoaded + ' cards';
             document.getElementById('statusDot').style.background = 'var(--accent)';
             updateTierBadge('ready');
-
-            // Seed lexicon rail from config
             Canvas.setLexicon();
-            console.log('[Artemis Chat] Ready.');
+
+            // Init Olympian Bridge
+            if (typeof OlympianBridge !== 'undefined') {
+                OlympianBridge.init('Artemis', '🏹');
+                var telos = await OlympianBridge.getActiveTelosAsync();
+                if (telos) {
+                    document.getElementById('telosBadge').textContent = '🎯 ' + telos.statement;
+                    document.getElementById('telosBadge').title = 'Telos: ' + telos.statement + '\nUrgency: ' + (telos.urgency||'—') + '\nCoherence: ' + (telos.coherence||'—');
+                    console.log('🎯 Artemis aligned to Telos:', telos.statement);
+                } else {
+                    document.getElementById('telosBadge').textContent = '🎯 No active telos';
+                }
+                await OlympianBridge.getTasksAsync();
+                var relevant = OlympianBridge.getRelevantTasks();
+                if (relevant.length > 0) console.log('📋 ' + relevant.length + ' relevant tasks for Artemis');
+                OlympianBridge.logStatus();
+            }
+
+            console.log('[Artemis] Ready.');
         } else {
             document.getElementById('statusDot').style.background = '#c06060';
-            document.getElementById('statusDot').title = 'Init failed';
-            addArtemisMessage('I am here, but my card engine did not rise properly. The hunt may be hindered.', null, null);
+            addArtemisMessage('I am here, but my card engine did not rise properly.', null, null);
         }
         document.getElementById('userInput').focus();
     }
 
     async function sendMessage() {
         if (isProcessing) return;
-        var inputEl = document.getElementById('userInput');
-        var input = inputEl.value.trim();
+        var inputEl = document.getElementById('userInput'), input = inputEl.value.trim();
         if (!input) return;
-
-        inputEl.value = '';
-        autoResize(inputEl);
-        addUserMessage(input);
-        conversationHistory.push({ role: 'user', content: input });
-
-        if (messageCount === 0) {
-            var w = document.getElementById('welcomeMsg');
-            if (w) w.style.display = 'none';
-        }
-
-        showTyping(true);
-        updateTierBadge('thinking');
-        isProcessing = true;
+        inputEl.value = ''; autoResize(inputEl); addUserMessage(input);
+        conversationHistory.push({ role:'user', content:input });
+        if (messageCount === 0) { var w = document.getElementById('welcomeMsg'); if (w) w.style.display = 'none'; }
+        showTyping(true); updateTierBadge('thinking'); isProcessing = true;
         document.getElementById('btnSend').disabled = true;
-
-        // Show hunt queue immediately
         Canvas.setQueue(['classifying...']);
 
         try {
             var startTime = performance.now();
-            var result = await ArtemisAgent.processInput(input, {
-                conversationHistory: conversationHistory.slice(-10)
-            });
+            var result = await ArtemisAgent.processInput(input, { conversationHistory: conversationHistory.slice(-10) });
             var elapsed = (performance.now() - startTime).toFixed(0);
-
             var cardsPlayed = result.metadata ? result.metadata.cardsPlayed : [];
-            console.log('[Artemis Chat] ' + elapsed + 'ms — ' + (cardsPlayed.join(', ') || 'none'));
-
-            var responseText = result.text || 'I loosed an arrow, but it found no target. Try again?';
-
+            var responseText = result.text || 'I loosed an arrow, but it found no target.';
             var tierInfo = extractTierInfo(result);
-            if (tierInfo) { currentTier = tierInfo; updateTierBadge(tierInfo); }
-            else { updateTierBadge('done'); }
+            if (tierInfo) { currentTier = tierInfo; updateTierBadge(tierInfo); } else { updateTierBadge('done'); }
 
-            // Bridge results to Canvas
             bridgeToCanvas(result, input);
 
-            // Show compact summary in chat
+            // ── OLYMPIAN BRIDGE CONTRIBUTION ──
+            if (typeof OlympianBridge !== 'undefined' && OlympianBridge.isReady()) {
+                var telos = OlympianBridge.getActiveTelos(), telosId = telos ? telos.id : null;
+                OlympianBridge.addToken(input.substring(0,100), 'S', 'hunt_and_pursuit', telosId, { cards_played: cardsPlayed.join(','), elapsed_ms: elapsed });
+                if (responseText.indexOf('TRACKS CONVERGE') > -1 && cardsPlayed.length >= 2) {
+                    OlympianBridge.addPair(null, null, cardsPlayed[0], cardsPlayed[1], 'hunt', 'hunt', 0.7, 0.2);
+                }
+                var lowerInput = input.toLowerCase();
+                if (lowerInput.indexOf('what is') > -1 || lowerInput.indexOf('who is') > -1 || lowerInput.indexOf('find') > -1 || lowerInput.indexOf('search') > -1) {
+                    OlympianBridge.addTriplet('Artemis', 'hunted', input.substring(0,80), 'hunt_and_pursuit', 'artemis_engine', 60, 55);
+                }
+            }
+
             var chatSummary = buildChatSummary(result, cardsPlayed);
-            addArtemisMessage(chatSummary, null, { cardsPlayed: cardsPlayed, tier: currentTier });
-
-            conversationHistory.push({
-                role: 'assistant',
-                content: result.text || '',
-                imageUrl: null
-            });
+            addArtemisMessage(chatSummary, null, { cardsPlayed:cardsPlayed, tier:currentTier });
+            conversationHistory.push({ role:'assistant', content:result.text||'', imageUrl:null });
             messageCount++;
-
         } catch (err) {
-            console.error('[Artemis Chat] Error:', err);
-            updateTierBadge('error');
-            Canvas.clearQueue();
-            addArtemisMessage('My arrow faltered. An error occurred. Please try again.', null, { tier: 'error' });
+            console.error('[Artemis] Error:', err); updateTierBadge('error'); Canvas.clearQueue();
+            addArtemisMessage('My arrow faltered. An error occurred.', null, { tier:'error' });
         }
-
-        showTyping(false);
-        isProcessing = false;
+        showTyping(false); isProcessing = false;
         document.getElementById('btnSend').disabled = false;
         document.getElementById('userInput').focus();
     }
 
     function buildChatSummary(result, cardsPlayed) {
-        // Chat shows a compact summary — full data is on Canvas
-        var stats = Canvas.getStats();
-        var text = result.text || '';
-        var lines = text.split('\n').filter(function(l) { return l.trim(); });
-
+        var stats = Canvas.getStats(), text = result.text||'', lines = text.split('\n').filter(function(l){return l.trim();});
         if (lines.length === 0) return 'Hunt complete — no tracks found.';
-
-        // First meaningful line as summary
-        var first = lines[0].replace(/^[🏹📜📁⟡]\s*(FROM [A-Z]+:)?\s*/i, '').trim();
+        var first = lines[0].replace(/^[🏹📜📁⟡]\s*(FROM [A-Z]+:)?\s*/i,'').trim();
         if (!first || first.length < 4) first = lines[1] ? lines[1].trim() : 'Hunt complete.';
-
-        var suffix = stats.total > 0
-            ? '\n\n*' + stats.total + ' block' + (stats.total !== 1 ? 's' : '') + ' landed on the Canvas →*'
-            : '';
-
-        return first.substring(0, 280) + (first.length > 280 ? '...' : '') + suffix;
+        var suffix = stats.total > 0 ? '\n\n*' + stats.total + ' block' + (stats.total!==1?'s':'') + ' landed on the Canvas →*' : '';
+        return first.substring(0,280) + (first.length>280?'...':'') + suffix;
     }
 
     function extractTierInfo(result) {
@@ -1281,97 +469,40 @@
     }
 
     function updateTierBadge(tier) {
-        var badge = document.getElementById('tierBadge');
-        var map = {
-            'ready':        { text: '◈ READY',       color: 'var(--silver)' },
-            'thinking':     { text: '◈ HUNTING',      color: 'var(--muted)' },
-            'pollinations': { text: '☁ POLLINATIONS', color: '#60a5fa' },
-            'browser':      { text: '🧠 BROWSER',     color: '#a78bfa' },
-            'loading':      { text: '⟳ LOADING',      color: '#f59e0b' },
-            'scripted':     { text: '📜 SCRIPTED',    color: '#c0a060' },
-            'done':         { text: '◈ DONE',         color: 'var(--silver)' },
-            'error':        { text: '✗ ERROR',        color: '#c06060' }
+        var badge = document.getElementById('tierBadge'), map = {
+            'ready':{text:'◈ READY',color:'var(--silver)'},'thinking':{text:'◈ HUNTING',color:'var(--muted)'},
+            'pollinations':{text:'☁ POLLINATIONS',color:'#60a5fa'},'browser':{text:'🧠 BROWSER',color:'#a78bfa'},
+            'loading':{text:'⟳ LOADING',color:'#f59e0b'},'scripted':{text:'📜 SCRIPTED',color:'#c0a060'},
+            'done':{text:'◈ DONE',color:'var(--silver)'},'error':{text:'✗ ERROR',color:'#c06060'}
         };
-        var info = map[tier] || map['done'];
-        badge.textContent = info.text;
-        badge.style.color = info.color;
-        badge.style.borderColor = info.color;
+        var info = map[tier]||map['done']; badge.textContent = info.text; badge.style.color = info.color; badge.style.borderColor = info.color;
     }
 
     function addUserMessage(text) {
-        var msg = document.createElement('div');
-        msg.className = 'message user';
-        msg.innerHTML = '<div class="avatar">👤</div><div class="bubble">' + escapeHtml(text) + '</div>';
-        document.getElementById('chatArea').appendChild(msg);
-        scrollToBottom();
+        var msg = document.createElement('div'); msg.className = 'message user';
+        msg.innerHTML = '<div class="avatar">👤</div><div class="bubble">' + text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+        document.getElementById('chatArea').appendChild(msg); scrollToBottom();
     }
 
     function addArtemisMessage(text, imageUrl, meta) {
-        var msg = document.createElement('div');
-        msg.className = 'message artemis';
-
+        var msg = document.createElement('div'); msg.className = 'message artemis';
+        var cleanText = text, cardMatch = text.match(/<!--CARDS:(.+?)-->/);
         var cardTagHtml = '';
-        var cleanText = text;
-        var cardMatch = text.match(/<!--CARDS:(.+?)-->/);
-        if (cardMatch) {
-            cleanText = text.replace(/<!--CARDS:.+?-->/, '').trim();
-            cardTagHtml = '<div class="tier-tag">🃏 ' + cardMatch[1].replace(/,/g, ' · ') + '</div>';
-        }
-
-        var formattedText = formatText(cleanText);
-        var memoryNoteHtml = '';
-
-        msg.innerHTML = '<div class="avatar">🏹</div><div class="bubble">' +
-            formattedText + memoryNoteHtml + cardTagHtml + '</div>';
-
-        document.getElementById('chatArea').appendChild(msg);
-        scrollToBottom();
+        if (cardMatch) { cleanText = text.replace(/<!--CARDS:.+?-->/, '').trim(); cardTagHtml = '<div class="tier-tag">🃏 ' + cardMatch[1].replace(/,/g,' · ') + '</div>'; }
+        var formattedText = cleanText.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" style="color:var(--accent);">$1</a>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\*([^*]+)\*/g,'<em>$1</em>').replace(/\n/g,'<br>');
+        msg.innerHTML = '<div class="avatar">🏹</div><div class="bubble">' + formattedText + cardTagHtml + '</div>';
+        document.getElementById('chatArea').appendChild(msg); scrollToBottom();
     }
 
-    function showTyping(show) {
-        document.getElementById('typingArea').style.display = show ? 'block' : 'none';
-        if (show) scrollToBottom();
-    }
-
-    function scrollToBottom() {
-        var area = document.getElementById('chatArea');
-        area.scrollTop = area.scrollHeight;
-    }
-
-    function autoResize(el) {
-        el.style.height = 'auto';
-        el.style.height = Math.min(el.scrollHeight, 100) + 'px';
-    }
-
-    function formatText(text) {
-        if (!text) return '';
-        text = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:var(--accent);">$1</a>');
-        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-        text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-        text = text.replace(/\n/g, '<br>');
-        return text;
-    }
-
-    function escapeHtml(text) {
-        var d = document.createElement('div');
-        d.textContent = text;
-        return d.innerHTML;
-    }
-
-    function handleKeyDown(event) {
-        if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault();
-            sendMessage();
-        }
-        setTimeout(function() { autoResize(event.target); }, 0);
-    }
+    function showTyping(show) { document.getElementById('typingArea').style.display = show ? 'block' : 'none'; if (show) scrollToBottom(); }
+    function scrollToBottom() { var a = document.getElementById('chatArea'); a.scrollTop = a.scrollHeight; }
+    function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 100) + 'px'; }
+    function handleKeyDown(event) { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); } setTimeout(function(){ autoResize(event.target); }, 0); }
 
     boot().catch(function(err) {
-        console.error('[Artemis Chat] Boot failed:', err);
+        console.error('[Artemis] Boot failed:', err);
         document.getElementById('statusDot').style.background = '#c06060';
         updateTierBadge('error');
-        var w = document.getElementById('welcomeMsg');
-        if (w) w.innerHTML = '<div class="big-icon">🏹</div><h2>Artemis</h2><p style="color:#c06060;">The huntress could not rise. Check console.</p>';
     });
     </script>
 </body>
